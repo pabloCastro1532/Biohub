@@ -22,7 +22,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
-                .requestMatchers("/api/auth/login", "/actuator/health/**", "/actuator/health").permitAll()
+                .requestMatchers("/api/auth/login", "/error", "/actuator/health/**", "/actuator/health").permitAll()
                 .anyRequest().authenticated())
             // Sin token válido (o sesión revocada) => 401, como exige ASR-4.
             .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
