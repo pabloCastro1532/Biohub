@@ -6,3 +6,4 @@ dist/
 *.iml
 .env
 .angular/
+login.json
