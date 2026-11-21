@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HallazgoReclasificado",
+  "description": "Contrato definido; solo se publica si se construye la reclasificación (nivel 3).",
+  "type": "object",
+  "required": ["id_evento", "ocurrido_en", "hallazgo_id", "especie_anterior", "especie_nueva", "autor", "motivo"],
+  "properties": {
+    "id_evento": { "type": "string", "format": "uuid" },
+    "ocurrido_en": { "type": "string", "format": "date-time" },
+    "hallazgo_id": { "type": "integer" },
+    "especie_anterior": { "type": "integer" },
+    "especie_nueva": { "type": "integer" },
+    "autor": { "type": "string" },
+    "motivo": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

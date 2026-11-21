@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HallazgoRegistrado",
+  "description": "Se publica al crear una versión de hallazgo. Sin coordenadas exactas.",
+  "type": "object",
+  "required": ["id_evento", "ocurrido_en", "hallazgo_id", "especie_id", "version", "region", "fecha"],
+  "properties": {
+    "id_evento": { "type": "string", "format": "uuid" },
+    "ocurrido_en": { "type": "string", "format": "date-time" },
+    "hallazgo_id": { "type": "integer" },
+    "especie_id": { "type": "integer" },
+    "version": { "type": "integer", "minimum": 1 },
+    "region": { "type": "string" },
+    "fecha": { "type": "string", "format": "date" },
+    "atributos_publicos": { "type": "object" }
+  },
+  "additionalProperties": false
+}

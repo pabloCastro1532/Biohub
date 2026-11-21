@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AccesoCoordenadasRegistrado",
+  "description": "Una consulta de ubicación exacta, aceptada o rechazada. Alimenta a MonitorSeguridad.",
+  "type": "object",
+  "required": ["id_evento", "ocurrido_en", "usuario_id", "hallazgo_id", "resultado"],
+  "properties": {
+    "id_evento": { "type": "string", "format": "uuid" },
+    "ocurrido_en": { "type": "string", "format": "date-time" },
+    "usuario_id": { "type": "integer" },
+    "hallazgo_id": { "type": "integer" },
+    "resultado": { "type": "string", "enum": ["ACEPTADO", "RECHAZADO"] }
+  },
+  "additionalProperties": false
+}

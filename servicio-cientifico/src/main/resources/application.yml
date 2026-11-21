@@ -1,0 +1,42 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: servicio-cientifico
+  datasource:
+    # Usuario limitado de la aplicación (solo INSERT/SELECT sobre las versiones, ASR-3).
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/cientifica
+    username: ${DB_USER:biohub_app}
+    password: ${DB_PASSWORD:biohub_app}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none        # el esquema lo crea Flyway, nunca Hibernate
+  flyway:
+    # Flyway migra con el usuario ADMINISTRADOR, no con el de la aplicación.
+    enabled: ${FLYWAY_ENABLED:false}   # Compose lo activa; migraciones en db/migration
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/cientifica
+    user: ${DB_ADMIN_USER:root}
+    password: ${DB_ADMIN_PASSWORD:root}
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: 5672
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASSWORD:guest}
+
+biohub:
+  jwt:
+    # Mínimo 32 caracteres. En Compose se sobreescribe con la variable JWT_SECRETO.
+    secreto: ${JWT_SECRETO:cambiar-este-secreto-en-compose-minimo-32-chars}
+    duracion-minutos: 60
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

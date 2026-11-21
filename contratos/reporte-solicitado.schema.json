@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReporteSolicitado",
+  "description": "Solicitud del reporte mensual. Solo nivel 3 (procesador de reportes).",
+  "type": "object",
+  "required": ["id_evento", "ocurrido_en", "periodo", "solicitado_por"],
+  "properties": {
+    "id_evento": { "type": "string", "format": "uuid" },
+    "ocurrido_en": { "type": "string", "format": "date-time" },
+    "periodo": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" },
+    "solicitado_por": { "type": "string" }
+  },
+  "additionalProperties": false
+}

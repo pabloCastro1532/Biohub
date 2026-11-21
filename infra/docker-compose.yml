@@ -1,0 +1,93 @@
+# BioHub: infraestructura local. Uso (desde la carpeta infra/):
+#   docker compose up -d mysql rabbitmq redis mailpit      # perfil reducido, para el día a día
+#   docker compose --profile completo up -d --build        # todo, para pruebas y sustentación
+# Docker Desktop necesita unos 8 GB de memoria para el perfil completo.
+
+name: biohub
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: biohub-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      TZ: America/Bogota
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Solo se ejecuta la PRIMERA vez que se crea el volumen (esquemas y usuarios).
+      - ./sql/00_esquemas.sql:/docker-entrypoint-initdb.d/00_esquemas.sql:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: biohub-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"      # gestión: http://localhost:15672  (guest / guest)
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: biohub-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: biohub-mailpit
+    ports:
+      - "1025:1025"        # SMTP
+      - "8025:8025"        # bandeja web: http://localhost:8025
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  servicio-cientifico:
+    profiles: ["completo"]
+    build: ../servicio-cientifico
+    container_name: biohub-servicio-cientifico
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_USER: biohub_app
+      DB_PASSWORD: ${BIOHUB_APP_PASSWORD:-biohub_app}
+      DB_ADMIN_USER: root
+      DB_ADMIN_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      FLYWAY_ENABLED: "true"            # Flyway migra con root; la aplicación usa biohub_app
+      RABBIT_HOST: rabbitmq
+      JWT_SECRETO: ${JWT_SECRETO:-cambiar-este-secreto-en-compose-minimo-32-chars}
+    ports:
+      - "8081:8081"       # la imagen JRE no trae curl/wget: se verifica desde afuera con /actuator/health
+
+  # Se agregan aquí a medida que existan (perfil "completo"):
+  #   consulta-publica-1 / consulta-publica-2, gateway, procesador-reportes (nivel 3)
+
+volumes:
+  mysql_data:
+  rabbit_data:
