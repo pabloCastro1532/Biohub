@@ -4,6 +4,7 @@ import co.biohub.cientifico.servicio.EdicionHallazgo;
 import co.biohub.cientifico.servicio.HallazgoService;
 import co.biohub.cientifico.servicio.HallazgoVista;
 import co.biohub.cientifico.servicio.NuevoHallazgo;
+import co.biohub.cientifico.servicio.VersionVista;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -28,6 +29,7 @@ import java.util.Map;
 /**
  * HU-01: hallazgos. Registrar: investigador y director. Consultar: investigador, director y auditor.
  * HU-08: editar (crea una versión nueva con motivo): investigador y director.
+ * HU-10/11/12: ver las versiones de un hallazgo con autor, motivo y cambios: investigador, director y auditor.
  * Ninguna respuesta lleva la ubicación exacta (ASR-4); esa sale por su propio camino, con registro de acceso.
  */
 @RestController
@@ -82,5 +84,17 @@ public class HallazgoController {
     @PreAuthorize("hasAnyRole('INVESTIGADOR','DIRECTOR','AUDITOR')")
     public HallazgoVista obtener(@PathVariable Long id) {
         return servicio.obtener(id);
+    }
+
+    @GetMapping("/{id}/versiones")
+    @PreAuthorize("hasAnyRole('INVESTIGADOR','DIRECTOR','AUDITOR')")
+    public List<VersionVista> versiones(@PathVariable Long id) {
+        return servicio.historial(id);
+    }
+
+    @GetMapping("/{id}/versiones/{numero}")
+    @PreAuthorize("hasAnyRole('INVESTIGADOR','DIRECTOR','AUDITOR')")
+    public VersionVista version(@PathVariable Long id, @PathVariable int numero) {
+        return servicio.version(id, numero);
     }
 }

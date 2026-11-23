@@ -15,14 +15,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * HU-01: registrar un hallazgo (crea la identidad y su versión 1).
  * HU-08: editar un hallazgo (inserta la versión n+1 con un motivo obligatorio; la anterior no se toca, ASR-3).
+ * HU-10, HU-11 y HU-12: consultar las versiones, con autor, motivo y qué cambió en cada una.
  * Los atributos se validan contra la plantilla activa de la especie (HU-02).
  */
 @Service
@@ -112,6 +116,67 @@ public class HallazgoService {
                 id, actual.getEspecieId(), nueva.getNumero(), d.region(), d.fecha(), d.atributos()));
 
         return vista(hallazgo, nueva, autor.nombreUsuario());
+    }
+
+    /**
+     * HU-10 / HU-11 / HU-12: todas las versiones de un hallazgo, de la primera a la última, cada una con su autor,
+     * su motivo y la lista de lo que cambió respecto a la anterior. Solo lee: no modifica nada.
+     */
+    @Transactional(readOnly = true)
+    public List<VersionVista> historial(Long id) {
+        if (!hallazgos.existsById(id)) {
+            throw new RecursoNoEncontradoException("No existe el hallazgo " + id);
+        }
+        Map<Long, String> nombres = new HashMap<>();
+        List<VersionVista> resultado = new ArrayList<>();
+        VersionHallazgo anterior = null;
+        for (VersionHallazgo v : versiones.findByHallazgoIdOrderByNumeroAsc(id)) {
+            String autor = nombres.computeIfAbsent(v.getAutorId(),
+                    k -> usuarios.porId(k).map(UsuarioBasico::nombreUsuario).orElse(null));
+            resultado.add(new VersionVista(v.getNumero(), v.getEspecieId(), v.getRegion(), v.getFechaObservacion(),
+                    v.getAtributos(), autor, v.getMotivo(), v.getCreadoEn(), cambios(anterior, v)));
+            anterior = v;
+        }
+        return resultado;
+    }
+
+    /** HU-10: una versión puntual (por ejemplo, la anterior a una edición). */
+    @Transactional(readOnly = true)
+    public VersionVista version(Long id, int numero) {
+        return historial(id).stream()
+                .filter(v -> v.numero() == numero)
+                .findFirst()
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "El hallazgo " + id + " no tiene la versión " + numero));
+    }
+
+    /** Qué cambió respecto a la versión anterior. La versión 1 no tiene cambios: es el registro inicial. */
+    private static List<String> cambios(VersionHallazgo anterior, VersionHallazgo v) {
+        List<String> cambios = new ArrayList<>();
+        if (anterior == null) {
+            return cambios;
+        }
+        if (!anterior.getEspecieId().equals(v.getEspecieId())) {
+            cambios.add("especie");
+        }
+        if (!anterior.getRegion().equals(v.getRegion())) {
+            cambios.add("región");
+        }
+        if (!anterior.getFechaObservacion().equals(v.getFechaObservacion())) {
+            cambios.add("fecha de observación");
+        }
+        if (anterior.getLatitud().compareTo(v.getLatitud()) != 0
+                || anterior.getLongitud().compareTo(v.getLongitud()) != 0) {
+            cambios.add("ubicación"); // solo se avisa que cambió; los valores exactos no salen (ASR-4)
+        }
+        Set<String> claves = new TreeSet<>(anterior.getAtributos().keySet());
+        claves.addAll(v.getAtributos().keySet());
+        for (String clave : claves) {
+            if (!Objects.equals(anterior.getAtributos().get(clave), v.getAtributos().get(clave))) {
+                cambios.add("atributo " + clave);
+            }
+        }
+        return cambios;
     }
 
     @Transactional(readOnly = true)
