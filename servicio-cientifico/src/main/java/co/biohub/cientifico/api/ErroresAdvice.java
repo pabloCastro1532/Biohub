@@ -1,5 +1,6 @@
 package co.biohub.cientifico.api;
 
+import co.biohub.cientifico.servicio.ConflictoException;
 import co.biohub.cientifico.servicio.RecursoNoEncontradoException;
 import co.biohub.cientifico.servicio.SolicitudInvalidaException;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,11 @@ public class ErroresAdvice {
     @ExceptionHandler(RecursoNoEncontradoException.class)
     public ResponseEntity<Map<String, String>> noEncontrado(RecursoNoEncontradoException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(ConflictoException.class)
+    public ResponseEntity<Map<String, String>> conflicto(ConflictoException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
