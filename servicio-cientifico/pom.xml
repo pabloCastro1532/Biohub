@@ -63,6 +63,13 @@
             <artifactId>flyway-mysql</artifactId>
         </dependency>
 
+        <!-- HU-02 / ASR-6: validación de atributos contra la plantilla (JSON Schema) -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.5.6</version>
+        </dependency>
+
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
