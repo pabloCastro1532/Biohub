@@ -1,5 +1,6 @@
 package co.biohub.cientifico.api;
 
+import co.biohub.cientifico.servicio.EdicionHallazgo;
 import co.biohub.cientifico.servicio.HallazgoService;
 import co.biohub.cientifico.servicio.HallazgoVista;
 import co.biohub.cientifico.servicio.NuevoHallazgo;
@@ -13,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -25,6 +27,7 @@ import java.util.Map;
 
 /**
  * HU-01: hallazgos. Registrar: investigador y director. Consultar: investigador, director y auditor.
+ * HU-08: editar (crea una versión nueva con motivo): investigador y director.
  * Ninguna respuesta lleva la ubicación exacta (ASR-4); esa sale por su propio camino, con registro de acceso.
  */
 @RestController
@@ -39,6 +42,15 @@ public class HallazgoController {
             @NotNull LocalDate fechaObservacion,
             Map<String, Object> atributos) {}
 
+    /** El motivo se valida en el servicio para devolver un mensaje claro. */
+    public record EdicionRequest(
+            @NotBlank @Size(max = 120) String region,
+            @NotNull BigDecimal latitud,
+            @NotNull BigDecimal longitud,
+            @NotNull LocalDate fechaObservacion,
+            Map<String, Object> atributos,
+            @Size(max = 500) String motivo) {}
+
     private final HallazgoService servicio;
 
     public HallazgoController(HallazgoService servicio) {
@@ -51,6 +63,13 @@ public class HallazgoController {
     public HallazgoVista registrar(@Valid @RequestBody HallazgoRequest req, Authentication usuario) {
         return servicio.registrar(new NuevoHallazgo(req.especieId(), req.region(), req.latitud(), req.longitud(),
                 req.fechaObservacion(), req.atributos()), usuario.getName());
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('INVESTIGADOR','DIRECTOR')")
+    public HallazgoVista editar(@PathVariable Long id, @Valid @RequestBody EdicionRequest req, Authentication usuario) {
+        return servicio.editar(id, new EdicionHallazgo(req.region(), req.latitud(), req.longitud(),
+                req.fechaObservacion(), req.atributos(), req.motivo()), usuario.getName());
     }
 
     @GetMapping
