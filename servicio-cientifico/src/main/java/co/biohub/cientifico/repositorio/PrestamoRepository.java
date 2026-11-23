@@ -17,6 +17,9 @@ public interface PrestamoRepository extends JpaRepository<Prestamo, Long> {
 
     List<Prestamo> findAllByOrderByPrestadoEnDesc();
 
+    /** HU-24: todos los préstamos de un equipo, del más reciente al más antiguo, devueltos o no. */
+    List<Prestamo> findByEquipoIdOrderByPrestadoEnDesc(Long equipoId);
+
     List<Prestamo> findByDevueltoEnIsNullOrderByPrestadoEnDesc();
 
     /** Cierra el préstamo solo si seguía abierto. Devuelve 0 si ya estaba devuelto, así dos devoluciones simultáneas no chocan. */
