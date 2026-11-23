@@ -81,6 +81,7 @@ services:
       DB_ADMIN_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       FLYWAY_ENABLED: "true"            # Flyway migra con root; la aplicación usa biohub_app
       RABBIT_HOST: rabbitmq
+      BIOHUB_SMTP_HOST: mailpit
       JWT_SECRETO: ${JWT_SECRETO:-cambiar-este-secreto-en-compose-minimo-32-chars}
     ports:
       - "8081:8081"       # la imagen JRE no trae curl/wget: se verifica desde afuera con /actuator/health
