@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-liquen text-tinta antialiased;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+@layer components {
+  /* Superficie de contenido */
+  .tarjeta {
+    @apply rounded-xl border border-linea bg-white p-6;
+  }
+
+  /* Campos de formulario */
+  .campo {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-tinta placeholder:text-slate-400;
+    @apply transition-colors focus:border-bio-600 focus:outline-none focus:ring-2 focus:ring-bio-500/30;
+  }
+  .etiqueta {
+    @apply mb-1 block text-sm font-medium text-tinta;
+  }
+
+  /* Botones: uno principal por zona, el resto secundarios */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-semibold transition-colors;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bio-500 focus-visible:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primario {
+    @apply btn bg-bio-600 text-white hover:bg-bio-700;
+  }
+  .btn-secundario {
+    @apply btn border border-linea bg-white text-bio-700 hover:border-bio-600 hover:bg-bio-50;
+  }
+  .btn-texto {
+    @apply btn px-3 font-medium text-musgo hover:bg-liquen;
+  }
+
+  /* Tablas */
+  .tabla {
+    @apply w-full text-left text-sm;
+  }
+  .tabla thead th {
+    @apply border-b border-linea px-3 py-2 font-medium text-musgo;
+  }
+  .tabla tbody td {
+    @apply border-b border-linea/60 px-3 py-3 align-middle;
+  }
+  .tabla tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
+  /* Etiquetas pequeñas de estado */
+  .pildora {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  /* Avisos */
+  .aviso-ok {
+    @apply rounded-lg border border-bio-100 bg-bio-50 px-4 py-2.5 text-sm text-bio-900;
+  }
+  .aviso-error {
+    @apply rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800;
+  }
+
+  /* Relieve topográfico: el motivo de la marca */
+  .contornos {
+    background-image: url('/assets/contornos.svg');
+    background-size: cover;
+    background-position: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
