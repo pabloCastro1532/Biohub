@@ -31,23 +31,23 @@ Proyecto de Ingeniería de Software 2 (ISW-2), Universidad El Bosque. Entrega 3.
 
 ```mermaid
 flowchart TD
-    NAV["Navegador (Angular)"]
-    GW["Gateway :8080"]
-    PUB["consulta-publica x2<br/>:8082 y :8083"]
-    CIE["servicio-cientifico :8081<br/>(núcleo, en capas)"]
-    REDIS[(Redis)]
-    MYSQL_L[(MySQL lectura)]
-    MYSQL_C[(MySQL científico<br/>y seguridad)]
-    RMQ{{"RabbitMQ<br/>exchange topic<br/>biohub.eventos"}}
+    NAV["Navegador Angular"]
+    GW["Gateway 8080"]
+    PUB["consulta-publica x2 puertos 8082 y 8083"]
+    CIE["servicio-cientifico puerto 8081 nucleo en capas"]
+    REDIS["Redis"]
+    MYSQL_L["MySQL lectura"]
+    MYSQL_C["MySQL cientifico y seguridad"]
+    RMQ["RabbitMQ exchange topic biohub.eventos"]
 
     NAV --> GW
-    GW -- "/api/publico/**" --> PUB
-    GW -- "/api/**" --> CIE
+    GW -->|"/api/publico/**"| PUB
+    GW -->|"/api/**"| CIE
     PUB --> REDIS
     PUB --> MYSQL_L
     CIE --> MYSQL_C
-    CIE -- publica eventos --> RMQ
-    RMQ -- consume eventos --> PUB
+    CIE -->|publica eventos| RMQ
+    RMQ -->|consume eventos| PUB
 ```
 
 - **servicio-cientifico**: el núcleo. Hallazgos, especies, plantillas, equipos, préstamos, cuentas, seguridad. Escribe en su propio esquema y publica eventos.
