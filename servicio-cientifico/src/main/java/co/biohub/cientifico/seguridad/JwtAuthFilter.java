@@ -35,7 +35,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwt.validar(cabecera.substring(7));
                 String usuario = claims.getSubject();
-                if (!revocadas.estaRevocada(claims.getId(), usuario)) {
+                if (!revocadas.estaRevocada(usuario, claims.getIssuedAt().toInstant())) {
                     String rol = claims.get("rol", String.class);
                     var auth = new UsernamePasswordAuthenticationToken(
                             usuario, null, List.of(new SimpleGrantedAuthority("ROLE_" + rol)));
