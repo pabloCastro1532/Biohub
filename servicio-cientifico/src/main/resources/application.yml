@@ -30,6 +30,9 @@ biohub:
     # Mínimo 32 caracteres. En Compose se sobreescribe con la variable JWT_SECRETO.
     secreto: ${JWT_SECRETO:cambiar-este-secreto-en-compose-minimo-32-chars}
     duracion-minutos: 60
+  usuarios-demo:
+    habilitado: ${USUARIOS_DEMO:true}
+    clave: ${CLAVE_DEMO:biohub}
 
 management:
   endpoints:
