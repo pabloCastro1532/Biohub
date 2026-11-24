@@ -17,4 +17,6 @@ public interface RegistroAccesoRepository extends JpaRepository<RegistroAcceso, 
 
     List<RegistroAcceso> findTop200ByUsuarioIdAndResultadoOrderByOcurridoEnDescIdDesc(Long usuarioId,
                                                                                      ResultadoAcceso resultado);
+    List<RegistroAcceso> findByUsuarioIdAndResultadoAndOcurridoEnBetweenOrderByOcurridoEnDesc(
+            Long usuarioId, ResultadoAcceso resultado, java.time.LocalDateTime desde, java.time.LocalDateTime hasta);                                                                                 
 }
