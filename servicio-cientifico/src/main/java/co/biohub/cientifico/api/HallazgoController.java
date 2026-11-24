@@ -4,6 +4,7 @@ import co.biohub.cientifico.servicio.EdicionHallazgo;
 import co.biohub.cientifico.servicio.HallazgoService;
 import co.biohub.cientifico.servicio.HallazgoVista;
 import co.biohub.cientifico.servicio.NuevoHallazgo;
+import co.biohub.cientifico.servicio.ReclasificacionHallazgo;
 import co.biohub.cientifico.servicio.VersionVista;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -29,6 +30,7 @@ import java.util.Map;
 /**
  * HU-01: hallazgos. Registrar: investigador y director. Consultar: investigador, director y auditor.
  * HU-08: editar (crea una versión nueva con motivo): investigador y director.
+ * HU-09: reclasificar (cambiar la especie, con motivo): solo el director científico.
  * HU-10/11/12: ver las versiones de un hallazgo con autor, motivo y cambios: investigador, director y auditor.
  * Ninguna respuesta lleva la ubicación exacta (ASR-4); esa sale por su propio camino, con registro de acceso.
  */
@@ -53,6 +55,12 @@ public class HallazgoController {
             Map<String, Object> atributos,
             @Size(max = 500) String motivo) {}
 
+    /** La especie se valida en el servicio para devolver un mensaje claro. */
+    public record ReclasificacionRequest(
+            Long especieId,
+            Map<String, Object> atributos,
+            @Size(max = 500) String motivo) {}
+
     private final HallazgoService servicio;
 
     public HallazgoController(HallazgoService servicio) {
@@ -72,6 +80,14 @@ public class HallazgoController {
     public HallazgoVista editar(@PathVariable Long id, @Valid @RequestBody EdicionRequest req, Authentication usuario) {
         return servicio.editar(id, new EdicionHallazgo(req.region(), req.latitud(), req.longitud(),
                 req.fechaObservacion(), req.atributos(), req.motivo()), usuario.getName());
+    }
+
+    @PostMapping("/{id}/reclasificar")
+    @PreAuthorize("hasRole('DIRECTOR')")
+    public HallazgoVista reclasificar(@PathVariable Long id, @Valid @RequestBody ReclasificacionRequest req,
+                                      Authentication usuario) {
+        return servicio.reclasificar(id, new ReclasificacionHallazgo(req.especieId(), req.atributos(), req.motivo()),
+                usuario.getName());
     }
 
     @GetMapping

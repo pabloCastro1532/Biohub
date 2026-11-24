@@ -153,6 +153,18 @@ public class LecturaRepository {
                 """, parametros(h));
     }
 
+    /**
+     * HU-09: pasa el hallazgo a la especie nueva, solo si todavía figura en la anterior. Si el evento hallazgo.registrado
+     * de la versión nueva llegó primero, el hallazgo ya está en la especie nueva y esto no cambia nada.
+     * Devuelve true si movió una fila.
+     */
+    public boolean moverHallazgo(long hallazgoId, long especieAnterior, long especieNueva) {
+        return jdbc.update("""
+                UPDATE hallazgo_publico SET especie_id = :nueva, actualizado_en = CURRENT_TIMESTAMP(3)
+                WHERE hallazgo_id = :hallazgo AND especie_id = :anterior
+                """, Map.of("hallazgo", hallazgoId, "anterior", especieAnterior, "nueva", especieNueva)) > 0;
+    }
+
     private MapSqlParameterSource parametros(HallazgoPublico h) {
         return new MapSqlParameterSource()
                 .addValue("hallazgo", h.hallazgoId())

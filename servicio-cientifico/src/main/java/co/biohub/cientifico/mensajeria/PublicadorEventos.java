@@ -1,6 +1,7 @@
 package co.biohub.cientifico.mensajeria;
 
 import co.biohub.cientifico.servicio.EspecieRegistradaEvento;
+import co.biohub.cientifico.servicio.HallazgoReclasificadoEvento;
 import co.biohub.cientifico.servicio.HallazgoRegistradoEvento;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,6 +67,27 @@ public class PublicadorEventos {
             LOG.info("Evento especie.registrada publicado (especie {})", e.especieId());
         } catch (RuntimeException ex) {
             LOG.warn("No se pudo publicar especie.registrada de la especie {}: {}", e.especieId(), ex.getMessage());
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void alReclasificarHallazgo(HallazgoReclasificadoEvento e) {
+        // Mismo contenido que contratos/hallazgo-reclasificado.schema.json.
+        Map<String, Object> mensaje = new LinkedHashMap<>();
+        mensaje.put("id_evento", UUID.randomUUID().toString());
+        mensaje.put("ocurrido_en", OffsetDateTime.now(ZoneOffset.UTC).toString());
+        mensaje.put("hallazgo_id", e.hallazgoId());
+        mensaje.put("especie_anterior", e.especieAnterior());
+        mensaje.put("especie_nueva", e.especieNueva());
+        mensaje.put("autor", e.autor());
+        mensaje.put("motivo", e.motivo());
+
+        try {
+            rabbit.convertAndSend(RabbitConfig.EXCHANGE_EVENTOS, "hallazgo.reclasificado", mensaje);
+            LOG.info("Evento hallazgo.reclasificado publicado (hallazgo {}: especie {} -> {})",
+                    e.hallazgoId(), e.especieAnterior(), e.especieNueva());
+        } catch (RuntimeException ex) {
+            LOG.warn("No se pudo publicar hallazgo.reclasificado del hallazgo {}: {}", e.hallazgoId(), ex.getMessage());
         }
     }
 }

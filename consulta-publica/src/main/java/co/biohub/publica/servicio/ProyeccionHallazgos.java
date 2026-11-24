@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -68,6 +69,34 @@ public class ProyeccionHallazgos {
         }
         LOG.info("Hallazgo {} versión {} aplicado a la BD de lectura", hallazgoId, version);
         return Optional.of(especieId);
+    }
+
+    /**
+     * HU-09: aplica hallazgo.reclasificado. Pasa el hallazgo a la especie nueva (si todavía no está ahí) y devuelve las
+     * dos especies, la anterior y la nueva, para limpiar la caché de ambas: una pierde el hallazgo y la otra lo gana.
+     * Es idempotente y no importa el orden respecto a hallazgo.registrado de la versión nueva. Un mensaje mal formado
+     * se descarta.
+     */
+    @Transactional
+    public List<Long> reclasificar(Map<String, Object> mensaje) {
+        String idEvento = mensaje.get("id_evento") instanceof String s && !s.isBlank() ? s : null;
+        Long hallazgoId = numero(mensaje.get("hallazgo_id"));
+        Long anterior = numero(mensaje.get("especie_anterior"));
+        Long nueva = numero(mensaje.get("especie_nueva"));
+
+        if (idEvento == null || hallazgoId == null || anterior == null || nueva == null || anterior.equals(nueva)) {
+            LOG.warn("Evento hallazgo.reclasificado descartado: faltan datos o las especies son iguales");
+            return List.of();
+        }
+        if (!lectura.registrarEvento(idEvento)) {
+            LOG.info("Evento {} ya procesado, se ignora", idEvento);
+            return List.of();
+        }
+        lectura.asegurarEspecie(nueva);
+        boolean movido = lectura.moverHallazgo(hallazgoId, anterior, nueva);
+        LOG.info("Hallazgo {} reclasificado de la especie {} a la {}{}", hallazgoId, anterior, nueva,
+                movido ? "" : " (la BD de lectura ya lo tenía en la especie nueva)");
+        return List.of(anterior, nueva);
     }
 
     private static Long numero(Object valor) {

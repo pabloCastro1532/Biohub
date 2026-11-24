@@ -26,6 +26,7 @@ import java.util.TreeSet;
 /**
  * HU-01: registrar un hallazgo (crea la identidad y su versión 1).
  * HU-08: editar un hallazgo (inserta la versión n+1 con un motivo obligatorio; la anterior no se toca, ASR-3).
+ * HU-09: reclasificar un hallazgo (versión n+1 con otra especie, sus atributos y un motivo obligatorio).
  * HU-10, HU-11 y HU-12: consultar las versiones, con autor, motivo y qué cambió en cada una.
  * Los atributos se validan contra la plantilla activa de la especie (HU-02).
  */
@@ -86,13 +87,7 @@ public class HallazgoService {
         VersionHallazgo actual = versiones.findFirstByHallazgoIdOrderByNumeroDesc(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("El hallazgo " + id + " no tiene versiones"));
 
-        String motivo = datos.motivo() == null ? "" : datos.motivo().trim();
-        if (motivo.isEmpty()) {
-            throw new SolicitudInvalidaException("El motivo del cambio es obligatorio");
-        }
-        if (motivo.length() > MOTIVO_MAXIMO) {
-            throw new SolicitudInvalidaException("El motivo no puede pasar de " + MOTIVO_MAXIMO + " caracteres");
-        }
+        String motivo = motivoLimpio(datos.motivo());
 
         Validados d = validar(actual.getEspecieId(), datos.region(), datos.latitud(), datos.longitud(),
                 datos.fechaObservacion(), datos.atributos());
@@ -114,6 +109,58 @@ public class HallazgoService {
 
         eventos.publishEvent(new HallazgoRegistradoEvento(
                 id, actual.getEspecieId(), nueva.getNumero(), d.region(), d.fecha(), d.atributos()));
+
+        return vista(hallazgo, nueva, autor.nombreUsuario());
+    }
+
+    /**
+     * HU-09: reclasifica un hallazgo, es decir, le cambia la especie. Crea la versión siguiente con la especie nueva,
+     * los atributos validados contra la plantilla de la especie NUEVA y un motivo obligatorio; la versión anterior no se
+     * toca (ASR-3). La región, la fecha y la ubicación se conservan. Publica hallazgo.registrado (el estado nuevo, para
+     * la BD de lectura) y hallazgo.reclasificado (quién, por qué y de qué especie a cuál).
+     */
+    @Transactional
+    public HallazgoVista reclasificar(Long id, ReclasificacionHallazgo datos, String nombreAutor) {
+        Hallazgo hallazgo = hallazgos.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe el hallazgo " + id));
+        VersionHallazgo actual = versiones.findFirstByHallazgoIdOrderByNumeroDesc(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("El hallazgo " + id + " no tiene versiones"));
+
+        String motivo = motivoLimpio(datos.motivo());
+
+        Long nuevaEspecie = datos.especieId();
+        if (nuevaEspecie == null) {
+            throw new SolicitudInvalidaException("Elige la especie nueva del hallazgo");
+        }
+        if (nuevaEspecie.equals(actual.getEspecieId())) {
+            throw new SolicitudInvalidaException("El hallazgo ya está clasificado como esa especie");
+        }
+        if (!especies.existsById(nuevaEspecie)) {
+            throw new RecursoNoEncontradoException("No existe la especie " + nuevaEspecie);
+        }
+
+        Map<String, Object> atributos = datos.atributos() == null ? new HashMap<>() : datos.atributos();
+        List<String> errores = plantillas.validar(nuevaEspecie, atributos);
+        if (!errores.isEmpty()) {
+            throw new SolicitudInvalidaException(
+                    "Los atributos no cumplen la plantilla de la especie nueva: " + String.join("; ", errores));
+        }
+
+        UsuarioBasico autor = autorDe(nombreAutor);
+
+        VersionHallazgo nueva;
+        try {
+            nueva = versiones.save(VersionHallazgo.nueva(
+                    id, actual.getNumero() + 1, nuevaEspecie, actual.getRegion(), actual.getLatitud(),
+                    actual.getLongitud(), actual.getFechaObservacion(), atributos, autor.id(), motivo));
+        } catch (DataIntegrityViolationException e) {
+            throw new ConflictoException("Otra persona modificó este hallazgo al mismo tiempo; vuelve a cargarlo e inténtalo de nuevo");
+        }
+
+        eventos.publishEvent(new HallazgoRegistradoEvento(
+                id, nuevaEspecie, nueva.getNumero(), nueva.getRegion(), nueva.getFechaObservacion(), atributos));
+        eventos.publishEvent(new HallazgoReclasificadoEvento(
+                id, actual.getEspecieId(), nuevaEspecie, autor.nombreUsuario(), motivo));
 
         return vista(hallazgo, nueva, autor.nombreUsuario());
     }
@@ -198,6 +245,18 @@ public class HallazgoService {
                         "El hallazgo " + hallazgo.getId() + " no tiene versiones"));
         String autor = usuarios.porId(version.getAutorId()).map(UsuarioBasico::nombreUsuario).orElse(null);
         return vista(hallazgo, version, autor);
+    }
+
+    /** El motivo es obligatorio y de hasta 500 caracteres; se devuelve sin espacios de más. */
+    private static String motivoLimpio(String entrada) {
+        String motivo = entrada == null ? "" : entrada.trim();
+        if (motivo.isEmpty()) {
+            throw new SolicitudInvalidaException("El motivo del cambio es obligatorio");
+        }
+        if (motivo.length() > MOTIVO_MAXIMO) {
+            throw new SolicitudInvalidaException("El motivo no puede pasar de " + MOTIVO_MAXIMO + " caracteres");
+        }
+        return motivo;
     }
 
     private UsuarioBasico autorDe(String nombreAutor) {

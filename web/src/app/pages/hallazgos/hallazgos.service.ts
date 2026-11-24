@@ -33,6 +33,13 @@ export interface EdicionHallazgo {
   motivo: string;
 }
 
+/** Datos para reclasificar un hallazgo (HU-09): la especie nueva, sus atributos y el motivo. Lugar y fecha se conservan. */
+export interface Reclasificacion {
+  especieId: number;
+  atributos: Record<string, unknown>;
+  motivo: string;
+}
+
 /** Una versión del historial (HU-10, HU-11 y HU-12). A propósito no trae coordenadas: solo dice que la "ubicación" cambió. */
 export interface VersionHallazgo {
   numero: number;
@@ -46,7 +53,7 @@ export interface VersionHallazgo {
   cambios: string[];
 }
 
-/** Contrato con /api/hallazgos (HU-01, HU-08, HU-10, HU-11 y HU-12). */
+/** Contrato con /api/hallazgos (HU-01, HU-08, HU-09, HU-10, HU-11 y HU-12). */
 @Injectable({ providedIn: 'root' })
 export class HallazgosService {
   private http = inject(HttpClient);
@@ -62,6 +69,11 @@ export class HallazgosService {
   /** HU-08: guarda una versión nueva del hallazgo con el motivo del cambio. */
   editar(id: number, e: EdicionHallazgo): Observable<Hallazgo> {
     return this.http.put<Hallazgo>(`/api/hallazgos/${id}`, e);
+  }
+
+  /** HU-09: cambia la especie del hallazgo creando una versión nueva (solo el director). */
+  reclasificar(id: number, r: Reclasificacion): Observable<Hallazgo> {
+    return this.http.post<Hallazgo>(`/api/hallazgos/${id}/reclasificar`, r);
   }
 
   /** HU-10, HU-11 y HU-12: todas las versiones, de la primera a la última. */
