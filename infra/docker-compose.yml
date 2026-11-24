@@ -88,6 +88,46 @@ services:
   # Se agregan aquí a medida que existan (perfil "completo"):
   #   consulta-publica-1 / consulta-publica-2, gateway, procesador-reportes (nivel 3)
 
+  consulta-publica-1:
+    profiles: ["completo"]
+    build: ../consulta-publica
+    container_name: biohub-consulta-publica-1
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_USER: biohub_publica
+      DB_PASSWORD: ${BIOHUB_PUBLICA_PASSWORD:-biohub_publica}
+      RABBIT_HOST: rabbitmq
+      REDIS_HOST: redis
+    ports:
+      - "8082:8082"
+
+  consulta-publica-2:
+    profiles: ["completo"]
+    build: ../consulta-publica
+    container_name: biohub-consulta-publica-2
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_USER: biohub_publica
+      DB_PASSWORD: ${BIOHUB_PUBLICA_PASSWORD:-biohub_publica}
+      RABBIT_HOST: rabbitmq
+      REDIS_HOST: redis
+    ports:
+      - "8083:8082"
+
 volumes:
   mysql_data:
   rabbit_data:

@@ -1,0 +1,52 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: consulta-publica
+  datasource:
+    # Esquema "lectura": copia de solo lectura SIN coordenadas exactas. Este usuario no tiene acceso a "cientifica".
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/lectura
+    username: ${DB_USER:biohub_publica}
+    password: ${DB_PASSWORD:biohub_publica}
+    hikari:
+      maximum-pool-size: 20      # varias consultas a la vez durante un pico
+  flyway:
+    enabled: true
+    # biohub_publica es dueño del esquema lectura, por eso migra con su propio usuario.
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: 5672
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASSWORD:guest}
+    listener:
+      simple:
+        default-requeue-rejected: false     # un mensaje que no se puede procesar no se reintenta para siempre
+        retry:
+          enabled: true
+          max-attempts: 5
+          initial-interval: 1s
+          multiplier: 2
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      timeout: 500ms                        # si Redis no responde, se consulta la BD de lectura (degradación elegante)
+      connect-timeout: 500ms
+  cache:
+    type: redis
+    redis:
+      time-to-live: ${CACHE_TTL:60s}        # TTL corto: la consistencia eventual dura segundos, no minutos
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    redis:
+      enabled: false     # Redis es una optimización: si cae, el servicio sigue disponible
