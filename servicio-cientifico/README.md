@@ -24,6 +24,15 @@ curl -i localhost:8081/api/ejemplo/director -H "Authorization: Bearer <token de 
 curl -i localhost:8081/actuator/health
 ```
 
+## Usuarios y login 
+
+El login valida contra la tabla `usuario` (clave con BCrypt) y emite un JWT con el rol.
+Usuario inexistente, clave incorrecta o usuario inactivo dan el mismo 401.
+
+Al arrancar, `UsuariosDemo` crea un usuario por rol (investigador, director, auditor, administrador,
+seguridad, visitante) con clave `biohub` si no existen. La clave se cambia con `CLAVE_DEMO` y la
+creación se apaga con `USUARIOS_DEMO=false`.
+
 ## Ejemplo para los otros tres
 
 Proteger un endpoint por rol: `@PreAuthorize("hasRole('DIRECTOR')")` (ver `EjemploRolesController`).
@@ -32,7 +41,6 @@ El token lleva el rol sin prefijo (`DIRECTOR`); Spring lo ve como `ROLE_DIRECTOR
 ## Pendientes conocidos
 
 - Flyway viene desactivado por defecto (`FLYWAY_ENABLED=false`); Compose lo activa. Migraciones en `db/migration` (V1 esquema, V2 datos demo).
-- La tabla `usuario` está vacía: el login falso no la usa. El domingo, HU-22 inserta los usuarios demo con BCrypt (los FK de `hallazgo` y `version_hallazgo` los necesitan).
 - `SesionesRevocadas` nunca revoca; HU-27 lo reemplaza.
 - `JWT_SECRETO` (32+ caracteres) se define en Compose; el valor por defecto es solo para desarrollo.
 - Capas previstas bajo `co.biohub.cientifico`: `api`, `servicio`, `dominio`, `repositorio`, `seguridad`, `eventos`.
