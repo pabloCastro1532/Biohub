@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { mensajeDeError } from '../../core/errores';
+import { REGIONES, etiquetaAtributo, valorLegible } from '../hallazgos/etiquetas-atributos';
 import { EspecieResumen, EspeciesService, FichaEspecie } from './especies.service';
 
 /**
@@ -37,15 +38,13 @@ import { EspecieResumen, EspeciesService, FichaEspecie } from './especies.servic
               />
             </div>
             <div>
-              <label for="esp-region" class="etiqueta">Región o departamento</label>
-              <input
-                id="esp-region"
-                class="campo"
-                placeholder="Por ejemplo: Meta"
-                maxlength="100"
-                [value]="region()"
-                (input)="region.set($any($event.target).value)"
-              />
+              <label for="esp-region" class="etiqueta">Departamento</label>
+              <select id="esp-region" class="campo" (change)="region.set($any($event.target).value)">
+                <option value="" [selected]="region() === ''">Todos los departamentos</option>
+                @for (r of regiones; track r) {
+                  <option [value]="r" [selected]="region() === r">{{ r }}</option>
+                }
+              </select>
             </div>
             <button type="submit" class="btn-primario" [disabled]="cargando()">Buscar</button>
             @if (texto() || region()) {
@@ -203,6 +202,9 @@ import { EspecieResumen, EspeciesService, FichaEspecie } from './especies.servic
 export class EspeciesComponent {
   private api = inject(EspeciesService);
 
+  /** Los departamentos que se usan al registrar un hallazgo: la búsqueda compara la región tal cual, así que se elige de la lista. */
+  readonly regiones = REGIONES;
+
   texto = signal('');
   region = signal('');
   resultados = signal<EspecieResumen[]>([]);
@@ -264,10 +266,7 @@ export class EspeciesComponent {
 
   /** Atributos de un hallazgo como pares [nombre legible, valor legible]. */
   atributos(atributos: Record<string, unknown>): [string, string][] {
-    return Object.entries(atributos ?? {}).map(([clave, valor]) => [
-      clave.replace(/_/g, ' '),
-      typeof valor === 'boolean' ? (valor ? 'sí' : 'no') : String(valor)
-    ]);
+    return Object.entries(atributos ?? {}).map(([clave, valor]) => [etiquetaAtributo(clave), valorLegible(valor)]);
   }
 
   private consultar(): void {

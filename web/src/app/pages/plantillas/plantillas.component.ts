@@ -26,13 +26,63 @@ import { AtributoVista, Especie, Plantilla, PlantillasService, Validacion } from
       <section class="tarjeta">
         <label for="especie" class="etiqueta">Especie</label>
         <select id="especie" (change)="elegir($event)" class="campo max-w-md">
-          <option value="">Elige una especie</option>
+          <option value="" [selected]="idElegido() === 0">Elige una especie</option>
           @for (e of especies(); track e.id) {
-            <option [value]="e.id">{{ e.nombreCientifico }}{{ e.nombreComun ? ' (' + e.nombreComun + ')' : '' }}</option>
+            <option [value]="e.id" [selected]="idElegido() === e.id">
+              {{ e.nombreCientifico }}{{ e.nombreComun ? ' (' + e.nombreComun + ')' : '' }}
+            </option>
           }
         </select>
         @if (error()) {
           <p class="mt-3 text-sm text-red-700" role="alert">{{ error() }}</p>
+        }
+        @if (puedeEditar()) {
+          <div class="mt-4 border-t border-linea pt-4">
+            @if (!agregando()) {
+              <button type="button" class="btn-secundario" (click)="abrirNueva()">Agregar una especie nueva</button>
+            } @else {
+              <form (submit)="crearEspecie($event)" class="space-y-4" aria-label="Agregar una especie">
+                <h2 class="text-lg font-semibold">Agregar una especie nueva</h2>
+                <div class="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label for="nueva-cientifico" class="etiqueta">Nombre científico *</label>
+                    <input
+                      id="nueva-cientifico"
+                      class="campo"
+                      maxlength="160"
+                      placeholder="Ej.: Tapirus terrestris"
+                      [value]="nuevaCientifico()"
+                      (input)="nuevaCientifico.set($any($event.target).value)"
+                    />
+                  </div>
+                  <div>
+                    <label for="nueva-comun" class="etiqueta">Nombre común (opcional)</label>
+                    <input
+                      id="nueva-comun"
+                      class="campo"
+                      maxlength="160"
+                      placeholder="Ej.: Danta"
+                      [value]="nuevaComun()"
+                      (input)="nuevaComun.set($any($event.target).value)"
+                    />
+                  </div>
+                </div>
+                <p class="text-sm text-musgo">
+                  La especie nace con un solo dato opcional, "Observaciones". Después agrega los datos propios de la
+                  especie en "Cambiar los datos que se piden".
+                </p>
+                @if (errorNueva()) {
+                  <p class="aviso-error" role="alert">{{ errorNueva() }}</p>
+                }
+                <div class="flex flex-wrap items-center gap-4">
+                  <button type="submit" class="btn-primario" [disabled]="creandoEspecie()">
+                    {{ creandoEspecie() ? 'Agregando...' : 'Agregar especie' }}
+                  </button>
+                  <button type="button" class="btn-texto" [disabled]="creandoEspecie()" (click)="cerrarNueva()">Cancelar</button>
+                </div>
+              </form>
+            }
+          </div>
         }
       </section>
 
@@ -144,7 +194,16 @@ export class PlantillasComponent {
   private auth = inject(AuthService);
 
   especies = signal<Especie[]>([]);
+  /** La especie que muestra el selector (0 = ninguna); cambia al elegir una o al agregar una nueva. */
+  idElegido = signal(0);
   plantilla = signal<Plantilla | null>(null);
+
+  /** Agregar una especie nueva (solo administrador y director). */
+  agregando = signal(false);
+  nuevaCientifico = signal('');
+  nuevaComun = signal('');
+  creandoEspecie = signal(false);
+  errorNueva = signal<string | null>(null);
   error = signal<string | null>(null);
   aviso = signal<string | null>(null);
 
@@ -167,15 +226,61 @@ export class PlantillasComponent {
   }
 
   elegir(ev: Event): void {
-    const id = Number((ev.target as HTMLSelectElement).value);
+    this.cargarPlantilla(Number((ev.target as HTMLSelectElement).value));
+  }
+
+  abrirNueva(): void {
+    this.nuevaCientifico.set('');
+    this.nuevaComun.set('');
+    this.errorNueva.set(null);
+    this.agregando.set(true);
+  }
+
+  cerrarNueva(): void {
+    this.agregando.set(false);
+    this.errorNueva.set(null);
+  }
+
+  crearEspecie(ev: Event): void {
+    ev.preventDefault();
+    const cientifico = this.nuevaCientifico().trim();
+    if (cientifico.length < 3) {
+      this.errorNueva.set('Escribe el nombre científico de la especie (al menos 3 letras).');
+      return;
+    }
+    this.creandoEspecie.set(true);
+    this.errorNueva.set(null);
+    this.api.crearEspecie(cientifico, this.nuevaComun().trim()).subscribe({
+      next: (nueva) => {
+        this.creandoEspecie.set(false);
+        this.agregando.set(false);
+        // La lista se vuelve a leer del servidor, y la especie nueva queda elegida con su plantilla inicial.
+        this.api.especies().subscribe({
+          next: (lista) => this.especies.set(lista),
+          error: (err: HttpErrorResponse) => this.error.set(mensajeDeError(err))
+        });
+        this.cargarPlantilla(nueva.id, `Se agregó ${nueva.nombreCientifico}. Ya se pueden registrar hallazgos de esta especie; agrega sus datos propios abajo.`);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.creandoEspecie.set(false);
+        this.errorNueva.set(mensajeDeError(err));
+      }
+    });
+  }
+
+  private cargarPlantilla(id: number, avisoInicial: string | null = null): void {
     this.error.set(null);
     this.aviso.set(null);
+    this.idElegido.set(id);
     if (!id) {
       this.plantilla.set(null);
       return;
     }
     this.api.activaDe(id).subscribe({
-      next: (p) => this.mostrar(p),
+      next: (p) => {
+        this.mostrar(p);
+        this.aviso.set(avisoInicial);
+      },
       error: (err: HttpErrorResponse) => {
         this.plantilla.set(null);
         this.error.set(mensajeDeError(err));
