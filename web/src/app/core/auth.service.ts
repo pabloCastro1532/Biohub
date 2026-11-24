@@ -46,10 +46,11 @@ export class AuthService {
     );
   }
 
-  logout(): void {
+  /** Cierra la sesión. Si la cerró el usuario va a la portada; si la cerró el servidor (401), al login. */
+  logout(destino: string = '/login'): void {
     this.sesion.set(null);
     sessionStorage.removeItem(CLAVE_SESION);
-    this.router.navigate(['/login']);
+    this.router.navigate([destino]);
   }
 
   token(): string | null {

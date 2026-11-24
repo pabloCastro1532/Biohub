@@ -8,7 +8,8 @@ export interface OpcionMenu {
   roles: Rol[];
 }
 
-const TODOS: Rol[] = ['INVESTIGADOR', 'DIRECTOR', 'AUDITOR', 'ADMINISTRADOR', 'SEGURIDAD', 'VISITANTE'];
+/** Roles con cuenta. Quien visita sin cuenta usa la portada pública (/), que no necesita iniciar sesión. */
+const TODOS: Rol[] = ['INVESTIGADOR', 'DIRECTOR', 'AUDITOR', 'ADMINISTRADOR', 'SEGURIDAD'];
 
 /**
  * Menú por rol. Cada integrante reemplaza el marcador de posición de su ruta por su pantalla real

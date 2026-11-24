@@ -1,17 +1,17 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   template: `
     <div class="min-h-screen md:grid md:grid-cols-[1.1fr_1fr]">
       <section class="contornos flex flex-col justify-between bg-bosque-900 px-8 py-10 text-white md:px-14 md:py-14">
-        <p class="text-xl font-semibold tracking-tight">BioHub</p>
+        <a routerLink="/" class="text-xl font-semibold tracking-tight hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">BioHub</a>
         <div class="my-12 max-w-md md:my-0">
           <h1 class="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
             El inventario de la biodiversidad del país, en un solo lugar.
@@ -47,6 +47,10 @@ import { AuthService } from '../../core/auth.service';
           <button type="submit" [disabled]="form.invalid || cargando()" class="btn-primario w-full">
             {{ cargando() ? 'Ingresando...' : 'Ingresar' }}
           </button>
+
+          <p class="text-center text-sm">
+            <a routerLink="/" class="font-medium text-bio-700 hover:underline">Volver a la búsqueda de especies</a>
+          </p>
         </form>
       </section>
     </div>

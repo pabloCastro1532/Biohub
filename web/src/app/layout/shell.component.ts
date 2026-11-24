@@ -63,7 +63,7 @@ const ICONO_GENERICO = 'M4 6h16M4 12h16M4 18h10';
           </div>
           <button
             type="button"
-            (click)="auth.logout()"
+            (click)="auth.logout('/')"
             class="rounded-lg border border-white/25 px-3 py-1.5 text-sm text-white/90 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
           >
             Salir
