@@ -6,12 +6,13 @@ import { forkJoin } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { mensajeDeError } from '../../core/errores';
 import { Equipo, EquiposService, Responsable } from './equipos.service';
+import { PrestamosComponent } from './prestamos.component';
 
-/** HU-03 (registrar equipo), HU-06 (asignar responsable) y HU-07 (ver responsable actual). */
+/** HU-03 (registrar equipo), HU-06 (asignar responsable), HU-07 (ver responsable actual) y, más abajo, préstamos (HU-04 y HU-05). */
 @Component({
   selector: 'app-equipos',
   standalone: true,
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, PrestamosComponent],
   template: `
     <header class="mb-8">
       <h1 class="text-2xl font-semibold tracking-tight">Equipos de campo</h1>
@@ -144,6 +145,10 @@ import { Equipo, EquiposService, Responsable } from './equipos.service';
           </div>
         }
       </section>
+
+      <div class="pt-8">
+        <app-prestamos />
+      </div>
     </div>
   `
 })

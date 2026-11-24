@@ -5,7 +5,9 @@ import { MENU } from './core/menu';
 import { ShellComponent } from './layout/shell.component';
 import { InicioComponent } from './pages/inicio/inicio.component';
 import { LoginComponent } from './pages/login/login.component';
+import { AccesosComponent } from './pages/accesos/accesos.component';
 import { EquiposComponent } from './pages/equipos/equipos.component';
+import { HallazgosComponent } from './pages/hallazgos/hallazgos.component';
 import { PendienteComponent } from './pages/pendiente/pendiente.component';
 import { PlantillasComponent } from './pages/plantillas/plantillas.component';
 import { SinPermisoComponent } from './pages/sin-permiso/sin-permiso.component';
@@ -15,7 +17,9 @@ import { SinPermisoComponent } from './pages/sin-permiso/sin-permiso.component';
  * las rutas que no están en esta lista muestran el marcador de posición.
  */
 const PANTALLAS: Record<string, Type<unknown>> = {
+  '/accesos': AccesosComponent,
   '/equipos': EquiposComponent,
+  '/hallazgos': HallazgosComponent,
   '/plantillas': PlantillasComponent
 };
 
