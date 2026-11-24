@@ -29,20 +29,25 @@ Proyecto de Ingeniería de Software 2 (ISW-2), Universidad El Bosque. Entrega 3.
 
 ## Arquitectura
 
-```
-                      Navegador (Angular)
-                             |
-                        Gateway :8080
-                      /              \
-        /api/publico/**              /api/**
-              |                         |
-   consulta-publica x2          servicio-cientifico :8081
-     :8082 y :8083                (núcleo, en capas)
-        |      |                        |
-      Redis  MySQL (lectura)        MySQL (científico, seguridad)
-        ^                               |
-        '---------- RabbitMQ <----------'
-              exchange topic "biohub.eventos"
+```mermaid
+flowchart TD
+    NAV["Navegador (Angular)"]
+    GW["Gateway :8080"]
+    PUB["consulta-publica x2<br/>:8082 y :8083"]
+    CIE["servicio-cientifico :8081<br/>(núcleo, en capas)"]
+    REDIS[(Redis)]
+    MYSQL_L[(MySQL lectura)]
+    MYSQL_C[(MySQL científico<br/>y seguridad)]
+    RMQ{{"RabbitMQ<br/>exchange topic<br/>biohub.eventos"}}
+
+    NAV --> GW
+    GW -- "/api/publico/**" --> PUB
+    GW -- "/api/**" --> CIE
+    PUB --> REDIS
+    PUB --> MYSQL_L
+    CIE --> MYSQL_C
+    CIE -- publica eventos --> RMQ
+    RMQ -- consume eventos --> PUB
 ```
 
 - **servicio-cientifico**: el núcleo. Hallazgos, especies, plantillas, equipos, préstamos, cuentas, seguridad. Escribe en su propio esquema y publica eventos.
@@ -218,3 +223,14 @@ La prueba de carga crea hallazgos reales; al terminar conviene hacer `docker com
 ## Equipo ISW-2
 
 Pablo Castro, Yonnatan, Valentina Osorio y Santiago Rojas.
+
+## Apoyo durante el desarrollo
+
+Durante el desarrollo del proyecto se usó Claude (Anthropic) como apoyo técnico para:
+
+- **Resolución de problemas de puertos:** identificación y liberación de un puerto bloqueado que impedía levantar los servicios.
+- **Corrección de errores:** revisión de excepciones, configuración y lógica para encontrar la causa de los fallos.
+- **Diseño de pantallas:** apoyo en la estructura y distribución de las vistas de la interfaz en Angular.
+- **Docker:** ayuda cuando los contenedores no cargaban o la imagen no compilaba correctamente, incluyendo ajustes en los Dockerfile y en la configuración de servicios.
+
+Las decisiones de arquitectura, la implementación final y las pruebas fueron responsabilidad del equipo.
