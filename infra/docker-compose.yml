@@ -81,6 +81,8 @@ services:
       DB_ADMIN_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       FLYWAY_ENABLED: "true"            # Flyway migra con root; la aplicación usa biohub_app
       RABBIT_HOST: rabbitmq
+      TZ: America/Bogota
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=America/Bogota"
       BIOHUB_SMTP_HOST: mailpit
       JWT_SECRETO: ${JWT_SECRETO:-cambiar-este-secreto-en-compose-minimo-32-chars}
     ports:
@@ -105,6 +107,8 @@ services:
       DB_USER: biohub_publica
       DB_PASSWORD: ${BIOHUB_PUBLICA_PASSWORD:-biohub_publica}
       RABBIT_HOST: rabbitmq
+      TZ: America/Bogota
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=America/Bogota"
       REDIS_HOST: redis
     ports:
       - "8082:8082"
@@ -125,6 +129,8 @@ services:
       DB_USER: biohub_publica
       DB_PASSWORD: ${BIOHUB_PUBLICA_PASSWORD:-biohub_publica}
       RABBIT_HOST: rabbitmq
+      TZ: America/Bogota
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=America/Bogota"
       REDIS_HOST: redis
     ports:
       - "8083:8082"
