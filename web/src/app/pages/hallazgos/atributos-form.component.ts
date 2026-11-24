@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { AtributoVista } from '../plantillas/plantillas.service';
+import { ayudaAtributo, etiquetaAtributo } from './etiquetas-atributos';
 
 /**
  * Campos de los atributos de una especie, armados a partir de su plantilla (HU-02).
@@ -12,7 +13,7 @@ import { AtributoVista } from '../plantillas/plantillas.service';
     <div class="grid gap-4 md:grid-cols-2">
       @for (a of atributos; track a.nombre) {
         <div>
-          <label [for]="prefijo + '-' + a.nombre" class="etiqueta">{{ a.nombre }}{{ a.requerido ? ' *' : '' }}</label>
+          <label [for]="prefijo + '-' + a.nombre" class="etiqueta">{{ etiqueta(a.nombre) }}{{ a.requerido ? ' *' : '' }}</label>
           @switch (a.tipo) {
             @case ('ENUMERADO') {
               <select [id]="prefijo + '-' + a.nombre" (change)="poner(a, $event)" class="campo">
@@ -60,6 +61,9 @@ import { AtributoVista } from '../plantillas/plantillas.service';
               />
             }
           }
+          @if (ayuda(a.nombre); as texto) {
+            <p class="mt-1 text-xs text-musgo">{{ texto }}</p>
+          }
         </div>
       }
     </div>
@@ -75,9 +79,26 @@ export class AtributosFormComponent implements OnChanges {
 
   private actual: Record<string, unknown> = {};
 
+  etiqueta = etiquetaAtributo;
+  ayuda = ayudaAtributo;
+
   ngOnChanges(cambios: SimpleChanges): void {
     if (cambios['valores']) {
       this.actual = { ...this.valores };
+    }
+    if (cambios['atributos'] || cambios['valores']) {
+      // Una casilla sin marcar es un "No" válido: si el atributo es obligatorio, se envía false desde el principio.
+      let cambio = false;
+      for (const a of this.atributos) {
+        if (a.tipo === 'BOOLEANO' && a.requerido && this.actual[a.nombre] === undefined) {
+          this.actual = { ...this.actual, [a.nombre]: false };
+          cambio = true;
+        }
+      }
+      if (cambio) {
+        const valores = { ...this.actual };
+        queueMicrotask(() => this.valoresChange.emit(valores));
+      }
     }
   }
 

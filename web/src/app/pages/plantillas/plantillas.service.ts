@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 export interface Especie {
   id: number;
@@ -34,6 +34,14 @@ export interface Validacion {
   errores: string[];
 }
 
+/**
+ * El servidor describe el tipo de cada atributo en minúsculas ("booleano", "numero"...) y las pantallas lo comparan
+ * en mayúsculas. Se normaliza aquí, en un solo lugar, para que cada campo se arme con su tipo real.
+ */
+function normalizar(p: Plantilla): Plantilla {
+  return { ...p, atributos: p.atributos.map((a) => ({ ...a, tipo: a.tipo.toUpperCase() as TipoAtributo })) };
+}
+
 /** Contrato con /api/plantillas (HU-02). */
 @Injectable({ providedIn: 'root' })
 export class PlantillasService {
@@ -44,12 +52,12 @@ export class PlantillasService {
   }
 
   activaDe(especieId: number): Observable<Plantilla> {
-    return this.http.get<Plantilla>(`/api/plantillas/activa/${especieId}`);
+    return this.http.get<Plantilla>(`/api/plantillas/activa/${especieId}`).pipe(map(normalizar));
   }
 
   /** Guarda el esquema como una versión nueva, que pasa a ser la activa. */
   editar(id: number, esquema: Record<string, unknown>): Observable<Plantilla> {
-    return this.http.put<Plantilla>(`/api/plantillas/${id}`, { esquema });
+    return this.http.put<Plantilla>(`/api/plantillas/${id}`, { esquema }).pipe(map(normalizar));
   }
 
   /** Comprueba unos atributos contra la plantilla activa de la especie, sin guardar nada. */
