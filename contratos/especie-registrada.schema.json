@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EspecieRegistrada",
+  "description": "Se publica al agregar una especie al catálogo. La consulta pública la usa para conocer su nombre.",
+  "type": "object",
+  "required": ["id_evento", "ocurrido_en", "especie_id", "nombre_cientifico"],
+  "properties": {
+    "id_evento": { "type": "string", "format": "uuid" },
+    "ocurrido_en": { "type": "string", "format": "date-time" },
+    "especie_id": { "type": "integer" },
+    "nombre_cientifico": { "type": "string" },
+    "nombre_comun": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

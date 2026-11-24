@@ -1,5 +1,6 @@
 package co.biohub.cientifico.mensajeria;
 
+import co.biohub.cientifico.servicio.EspecieRegistradaEvento;
 import co.biohub.cientifico.servicio.HallazgoRegistradoEvento;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,24 @@ public class PublicadorEventos {
             LOG.info("Evento hallazgo.registrado publicado (hallazgo {}, versión {})", e.hallazgoId(), e.version());
         } catch (RuntimeException ex) {
             LOG.warn("No se pudo publicar hallazgo.registrado del hallazgo {}: {}", e.hallazgoId(), ex.getMessage());
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void alRegistrarEspecie(EspecieRegistradaEvento e) {
+        // Mismo contenido que contratos/especie-registrada.schema.json.
+        Map<String, Object> mensaje = new LinkedHashMap<>();
+        mensaje.put("id_evento", UUID.randomUUID().toString());
+        mensaje.put("ocurrido_en", OffsetDateTime.now(ZoneOffset.UTC).toString());
+        mensaje.put("especie_id", e.especieId());
+        mensaje.put("nombre_cientifico", e.nombreCientifico());
+        mensaje.put("nombre_comun", e.nombreComun());
+
+        try {
+            rabbit.convertAndSend(RabbitConfig.EXCHANGE_EVENTOS, "especie.registrada", mensaje);
+            LOG.info("Evento especie.registrada publicado (especie {})", e.especieId());
+        } catch (RuntimeException ex) {
+            LOG.warn("No se pudo publicar especie.registrada de la especie {}: {}", e.especieId(), ex.getMessage());
         }
     }
 }

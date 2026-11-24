@@ -1,6 +1,6 @@
 # Contratos de eventos
 
-Cuatro eventos de la Entrega 2. Cada archivo `.schema.json` es un JSON Schema; todo mensaje lleva
+Cinco eventos (cuatro de la Entrega 2 y especie.registrada). Cada archivo `.schema.json` es un JSON Schema; todo mensaje lleva
 `id_evento` (UUID) y `ocurrido_en` (ISO 8601). **Ningún evento que sale del servicio científico lleva
 coordenadas exactas**, solo `region`.
 
@@ -12,6 +12,7 @@ Un exchange `topic` durable llamado `biohub.eventos`. Colas durables, una por co
 | --- | --- | --- | --- |
 | HallazgoRegistrado | `hallazgo.registrado` | `consulta-publica.hallazgos` | consulta-publica |
 | HallazgoReclasificado | `hallazgo.reclasificado` | `consulta-publica.hallazgos` | consulta-publica |
+| EspecieRegistrada | `especie.registrada` | `consulta-publica.especies` | consulta-publica |
 | AccesoCoordenadasRegistrado | `acceso.coordenadas.registrado` | `seguridad.accesos` | MonitorSeguridad (servicio-cientifico) |
 | ReporteSolicitado | `reporte.solicitado` | `reportes.solicitudes` | procesador-reportes (nivel 3) |
 
