@@ -155,4 +155,56 @@ class ProyeccionHallazgosTest {
         }
         assertFalse(captor.getValue().atributos().containsKey("latitud"));
     }
+
+    // ----- HU-09: hallazgo.reclasificado -----
+
+    private static Map<String, Object> reclasificacion(String id) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id_evento", id);
+        m.put("ocurrido_en", "2026-11-24T10:00:00Z");
+        m.put("hallazgo_id", 7);
+        m.put("especie_anterior", 1);
+        m.put("especie_nueva", 2);
+        m.put("autor", "director");
+        m.put("motivo", "Se confundió con otra especie");
+        return m;
+    }
+
+    @Test
+    void una_reclasificacion_mueve_el_hallazgo_y_devuelve_las_dos_especies() {
+        when(lectura.moverHallazgo(7L, 1L, 2L)).thenReturn(true);
+
+        java.util.List<Long> especies = proyeccion.reclasificar(reclasificacion("r-1"));
+
+        assertEquals(java.util.List.of(1L, 2L), especies);
+        verify(lectura).asegurarEspecie(2L);
+        verify(lectura).moverHallazgo(7L, 1L, 2L);
+    }
+
+    @Test
+    void una_reclasificacion_repetida_no_cambia_nada() {
+        when(lectura.registrarEvento("r-1")).thenReturn(false);
+
+        assertTrue(proyeccion.reclasificar(reclasificacion("r-1")).isEmpty());
+        verify(lectura, never()).moverHallazgo(anyLong(), anyLong(), anyLong());
+    }
+
+    @Test
+    void si_la_version_nueva_ya_la_movio_igual_se_limpia_la_cache_de_las_dos() {
+        when(lectura.moverHallazgo(7L, 1L, 2L)).thenReturn(false);
+
+        assertEquals(java.util.List.of(1L, 2L), proyeccion.reclasificar(reclasificacion("r-2")));
+    }
+
+    @Test
+    void una_reclasificacion_mal_formada_se_descarta() {
+        Map<String, Object> sinEspecieNueva = reclasificacion("r-3");
+        sinEspecieNueva.remove("especie_nueva");
+        Map<String, Object> igualesEspecies = reclasificacion("r-4");
+        igualesEspecies.put("especie_nueva", 1);
+
+        assertTrue(proyeccion.reclasificar(sinEspecieNueva).isEmpty());
+        assertTrue(proyeccion.reclasificar(igualesEspecies).isEmpty());
+        verify(lectura, never()).moverHallazgo(anyLong(), anyLong(), anyLong());
+    }
 }
