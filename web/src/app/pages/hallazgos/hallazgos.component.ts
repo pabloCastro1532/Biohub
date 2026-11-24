@@ -9,13 +9,14 @@ import { mensajeDeError } from '../../core/errores';
 import { AtributoVista, Especie, PlantillasService } from '../plantillas/plantillas.service';
 import { AtributosFormComponent } from './atributos-form.component';
 import { REGIONES, etiquetaAtributo, traducirErrores, valorLegible } from './etiquetas-atributos';
-import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service';
+import { Hallazgo, HallazgosService, ImagenHallazgo, VersionHallazgo } from './hallazgos.service';
 
 /**
  * HU-01: registrar un hallazgo con sus datos básicos y los atributos de su especie (plantilla activa, HU-02).
  * HU-08: editar un hallazgo con un motivo obligatorio (crea una versión nueva).
  * HU-09: reclasificar un hallazgo (cambiarle la especie) con un motivo obligatorio; solo el director.
  * HU-10, HU-11 y HU-12: ver el historial de versiones con autor, motivo y qué cambió.
+ * Imágenes: subir fotos JPG o PNG a un hallazgo (investigador y director) y verlas (también el auditor).
  * La ubicación exacta nunca se muestra aquí (ASR-4): la lista solo trae la región.
  */
 @Component({
@@ -143,6 +144,7 @@ import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service
                     <td>{{ h.autor ?? '—' }}</td>
                     <td class="whitespace-nowrap text-right">
                       <button type="button" class="btn-texto" (click)="verHistorial(h)">Historial</button>
+                      <button type="button" class="btn-texto" (click)="abrirImagenes(h)">Imágenes</button>
                       @if (puedeEscribir()) {
                         <button type="button" class="btn-texto" (click)="abrirEdicion(h)">Editar</button>
                       }
@@ -309,6 +311,61 @@ import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service
         </section>
       }
 
+      @if (imagenesDe(); as h) {
+        <section class="tarjeta" aria-labelledby="titulo-imagenes">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h2 id="titulo-imagenes" class="text-lg font-semibold">Imágenes del hallazgo {{ h.id }}</h2>
+              <p class="mt-1 text-sm text-musgo">{{ nombreDe(h.especieId) }}. Hasta 5 imágenes por hallazgo.</p>
+            </div>
+            <button type="button" class="btn-texto" (click)="cerrarImagenes()">Cerrar</button>
+          </div>
+
+          @if (puedeEscribir()) {
+            <div class="mt-4">
+              <label for="archivo-imagen" class="etiqueta">Agregar una imagen (JPG o PNG, hasta 2 MB)</label>
+              <input
+                id="archivo-imagen"
+                type="file"
+                accept="image/jpeg,image/png"
+                class="campo"
+                [disabled]="subiendoImagen()"
+                (change)="elegirImagen($event)"
+              />
+              <p class="mt-1 text-xs text-musgo">
+                Se guarda sin los datos de la cámara, así que no lleva la ubicación de la foto. No se puede borrar después.
+              </p>
+              @if (subiendoImagen()) {
+                <p class="mt-2 text-sm text-musgo" role="status">Subiendo imagen...</p>
+              }
+            </div>
+          }
+          @if (errorImagenes()) {
+            <p class="mt-4 aviso-error" role="alert">{{ errorImagenes() }}</p>
+          }
+
+          @if (cargandoImagenes()) {
+            <p class="mt-4 text-musgo">Cargando imágenes...</p>
+          } @else if (imagenes().length === 0) {
+            <p class="mt-4 text-musgo">Este hallazgo todavía no tiene imágenes.</p>
+          } @else {
+            <ul class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              @for (i of imagenes(); track i.id) {
+                <li class="rounded-lg border border-linea p-3">
+                  @if (i.url) {
+                    <img [src]="i.url" [alt]="'Imagen ' + i.nombreArchivo" class="h-40 w-full rounded-md object-cover" />
+                  } @else {
+                    <div class="flex h-40 items-center justify-center rounded-md bg-liquen text-sm text-musgo">Sin vista previa</div>
+                  }
+                  <p class="mt-2 truncate text-sm font-medium">{{ i.nombreArchivo }}</p>
+                  <p class="text-xs text-musgo">{{ i.autor ?? 'Autor desconocido' }} · {{ i.creadaEn | date: 'dd/MM/yyyy HH:mm' }}</p>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+
       @if (historialDe(); as h) {
         <section class="tarjeta" aria-labelledby="titulo-historial">
           <div class="flex items-start justify-between gap-4">
@@ -446,6 +503,13 @@ export class HallazgosComponent {
 
   // --- historial (HU-10, HU-11 y HU-12) ---
   historialDe = signal<Hallazgo | null>(null);
+
+  // --- imágenes ---
+  imagenesDe = signal<Hallazgo | null>(null);
+  imagenes = signal<(ImagenHallazgo & { url: string | null })[]>([]);
+  cargandoImagenes = signal(false);
+  subiendoImagen = signal(false);
+  errorImagenes = signal<string | null>(null);
   versiones = signal<VersionHallazgo[]>([]);
   cargandoHistorial = signal(false);
   errorHistorial = signal<string | null>(null);
@@ -640,6 +704,84 @@ export class HallazgosComponent {
           this.errorReclasificacion.set(traducirErrores(mensajeDeError(err)));
         }
       });
+  }
+
+  // ----- imágenes -----
+  abrirImagenes(h: Hallazgo): void {
+    this.imagenesDe.set(h);
+    this.llevarA('titulo-imagenes');
+    this.errorImagenes.set(null);
+    this.cargarImagenes(h.id);
+  }
+
+  cerrarImagenes(): void {
+    this.liberarImagenes();
+    this.imagenesDe.set(null);
+  }
+
+  /** Valida lo básico en el navegador (el servidor lo vuelve a comprobar) y sube la imagen elegida. */
+  elegirImagen(evento: Event): void {
+    const campo = evento.target as HTMLInputElement;
+    const archivo = campo.files?.[0];
+    const h = this.imagenesDe();
+    if (!archivo || !h) {
+      return;
+    }
+    campo.value = '';
+    this.errorImagenes.set(null);
+    if (archivo.type !== 'image/jpeg' && archivo.type !== 'image/png') {
+      this.errorImagenes.set('Solo se aceptan imágenes JPG o PNG.');
+      return;
+    }
+    if (archivo.size > 2 * 1024 * 1024) {
+      this.errorImagenes.set('La imagen no puede pasar de 2 MB.');
+      return;
+    }
+    this.subiendoImagen.set(true);
+    this.api.subirImagen(h.id, archivo).subscribe({
+      next: () => {
+        this.subiendoImagen.set(false);
+        this.cargarImagenes(h.id);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.subiendoImagen.set(false);
+        this.errorImagenes.set(mensajeDeError(err));
+      }
+    });
+  }
+
+  private cargarImagenes(id: number): void {
+    this.liberarImagenes();
+    this.cargandoImagenes.set(true);
+    this.api.imagenes(id).subscribe({
+      next: (lista) => {
+        this.imagenes.set(lista.map((i) => ({ ...i, url: null })));
+        this.cargandoImagenes.set(false);
+        // Cada archivo se pide con el token de sesión y se muestra desde una dirección temporal del navegador.
+        for (const i of lista) {
+          this.api.verImagen(id, i.id).subscribe({
+            next: (blob) => {
+              const url = URL.createObjectURL(blob);
+              this.imagenes.update((todas) => todas.map((x) => (x.id === i.id ? { ...x, url } : x)));
+            },
+            error: () => undefined
+          });
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        this.errorImagenes.set(mensajeDeError(err));
+        this.cargandoImagenes.set(false);
+      }
+    });
+  }
+
+  private liberarImagenes(): void {
+    for (const i of this.imagenes()) {
+      if (i.url) {
+        URL.revokeObjectURL(i.url);
+      }
+    }
+    this.imagenes.set([]);
   }
 
   // ----- historial -----
