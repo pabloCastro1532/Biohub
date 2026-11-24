@@ -8,4 +8,6 @@ import java.util.List;
 public interface EspecieRepository extends JpaRepository<Especie, Long> {
 
     List<Especie> findAllByOrderByNombreCientificoAsc();
+
+    boolean existsByNombreCientificoIgnoreCase(String nombreCientifico);
 }
