@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "HallazgoReclasificado",
-  "description": "Contrato definido; solo se publica si se construye la reclasificación (nivel 3).",
+  "description": "Se publica al reclasificar un hallazgo (HU-09), junto con hallazgo.registrado de la versión nueva.",
   "type": "object",
   "required": ["id_evento", "ocurrido_en", "hallazgo_id", "especie_anterior", "especie_nueva", "autor", "motivo"],
   "properties": {
