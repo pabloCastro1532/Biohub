@@ -45,6 +45,19 @@ curl -s localhost:8081/api/hallazgos/1/ubicacion -H "Authorization: Bearer <toke
 aceptada o rechazada, queda registrada antes de responder. `GuardiaUbicacionArquitecturaTest` (ArchUnit) falla si
 otra clase lee latitud/longitud o usa `ProveedorUbicacion` directamente.
 
+## Revocación y exposición (HU-27)
+
+Solo el rol `SEGURIDAD` (token del usuario `seguridad`).
+
+```
+curl.exe -i -X POST localhost:8081/api/seguridad/usuarios/<id>/revocar -H "Authorization: Bearer <token>"      # 204
+curl.exe -s "localhost:8081/api/seguridad/usuarios/<id>/exposicion?desde=2026-11-01T00:00:00&hasta=2026-11-30T23:59:59" -H "Authorization: Bearer <token>"
+```
+
+Revocar registra la acción en `accion_seguridad` y desactiva al usuario: su token recibe 401 en la siguiente petición y
+no puede volver a iniciar sesión. La exposición lista los hallazgos cuyas coordenadas exactas vio el usuario (solo
+accesos aceptados; por defecto, los últimos 30 días) y también queda registrada.
+
 ## Ejemplo para los otros tres
 
 Proteger un endpoint por rol: `@PreAuthorize("hasRole('DIRECTOR')")` (ver `EjemploRolesController`).
@@ -53,6 +66,5 @@ El token lleva el rol sin prefijo (`DIRECTOR`); Spring lo ve como `ROLE_DIRECTOR
 ## Pendientes conocidos
 
 - Flyway viene desactivado por defecto (`FLYWAY_ENABLED=false`); Compose lo activa. Migraciones en `db/migration` (V1 esquema, V2 datos demo).
-- `SesionesRevocadas` nunca revoca; HU-27 lo reemplaza.
 - `JWT_SECRETO` (32+ caracteres) se define en Compose; el valor por defecto es solo para desarrollo.
 - Capas previstas bajo `co.biohub.cientifico`: `api`, `servicio`, `dominio`, `repositorio`, `seguridad`, `eventos`.
