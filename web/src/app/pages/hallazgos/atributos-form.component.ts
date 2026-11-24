@@ -13,7 +13,7 @@ import { ayudaAtributo, etiquetaAtributo } from './etiquetas-atributos';
     <div class="grid gap-4 md:grid-cols-2">
       @for (a of atributos; track a.nombre) {
         <div>
-          <label [for]="prefijo + '-' + a.nombre" class="etiqueta">{{ etiqueta(a.nombre) }}{{ a.requerido ? ' *' : '' }}</label>
+          <label [for]="prefijo + '-' + a.nombre" class="etiqueta">{{ a.titulo || etiqueta(a.nombre) }}{{ a.requerido ? ' *' : '' }}</label>
           @switch (a.tipo) {
             @case ('ENUMERADO') {
               <select [id]="prefijo + '-' + a.nombre" (change)="poner(a, $event)" class="campo">
@@ -70,7 +70,7 @@ import { ayudaAtributo, etiquetaAtributo } from './etiquetas-atributos';
               />
             }
           }
-          @if (ayuda(a.nombre); as texto) {
+          @if (a.descripcion || ayuda(a.nombre); as texto) {
             <p class="mt-1 text-xs text-musgo">{{ texto }}</p>
           }
         </div>
