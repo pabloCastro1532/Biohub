@@ -33,6 +33,18 @@ Al arrancar, `UsuariosDemo` crea un usuario por rol (investigador, director, aud
 seguridad, visitante) con clave `biohub` si no existen. La clave se cambia con `CLAVE_DEMO` y la
 creación se apaga con `USUARIOS_DEMO=false`.
 
+## Ubicación de un hallazgo
+
+```
+curl -i localhost:8081/api/hallazgos/1/ubicacion                                        # 401, sin token
+curl -s localhost:8081/api/hallazgos/1/ubicacion -H "Authorization: Bearer <token de director>"   # coordenadas exactas
+curl -s localhost:8081/api/hallazgos/1/ubicacion -H "Authorization: Bearer <token de investigador>" # solo región
+```
+
+`GuardiaUbicacion` es el único punto que decide quién ve coordenadas exactas (solo el director). Cada consulta,
+aceptada o rechazada, queda registrada antes de responder. `GuardiaUbicacionArquitecturaTest` (ArchUnit) falla si
+otra clase lee latitud/longitud o usa `ProveedorUbicacion` directamente.
+
 ## Ejemplo para los otros tres
 
 Proteger un endpoint por rol: `@PreAuthorize("hasRole('DIRECTOR')")` (ver `EjemploRolesController`).
