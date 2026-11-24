@@ -117,6 +117,20 @@ public class LecturaRepository {
                 Map.of("id", id, "nombre", "Especie " + id));
     }
 
+    /**
+     * Guarda el nombre de una especie nueva (evento especie.registrada). Si ya había una fila provisional ("Especie N",
+     * porque un hallazgo llegó primero), le pone el nombre real. Repetirlo no cambia nada: es idempotente.
+     */
+    public void guardarEspecie(long id, String nombreCientifico, String nombreComun) {
+        MapSqlParameterSource p = new MapSqlParameterSource()
+                .addValue("id", id)
+                .addValue("cientifico", nombreCientifico)
+                .addValue("comun", nombreComun);
+        jdbc.update("INSERT INTO especie_publica (id, nombre_cientifico, nombre_comun) VALUES (:id, :cientifico, :comun)"
+                + " ON DUPLICATE KEY UPDATE nombre_cientifico = VALUES(nombre_cientifico),"
+                + " nombre_comun = VALUES(nombre_comun)", p);
+    }
+
     public Optional<Integer> versionDe(long hallazgoId) {
         List<Integer> filas = jdbc.query("SELECT version FROM hallazgo_publico WHERE hallazgo_id = :id",
                 Map.of("id", hallazgoId), (rs, n) -> rs.getInt("version"));

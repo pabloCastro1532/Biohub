@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Topología de contratos/README.md: exchange topic durable "biohub.eventos" y la cola durable de este servicio.
  * Las dos instancias de consulta-publica comparten la cola: cada mensaje lo recibe una sola.
+ * La cola de especies recibe especie.registrada, para conocer el nombre de las especies que se agregan.
  * (hallazgo.reclasificado se enlaza cuando exista HU-09.)
  */
 @Configuration
@@ -19,6 +20,7 @@ public class RabbitConfig {
 
     public static final String EXCHANGE_EVENTOS = "biohub.eventos";
     public static final String COLA_HALLAZGOS = "consulta-publica.hallazgos";
+    public static final String COLA_ESPECIES = "consulta-publica.especies";
 
     @Bean
     public TopicExchange exchangeEventos() {
@@ -33,6 +35,16 @@ public class RabbitConfig {
     @Bean
     public Binding enlaceHallazgoRegistrado(TopicExchange exchangeEventos) {
         return BindingBuilder.bind(colaHallazgos()).to(exchangeEventos).with("hallazgo.registrado");
+    }
+
+    @Bean
+    public Queue colaEspecies() {
+        return new Queue(COLA_ESPECIES, true);
+    }
+
+    @Bean
+    public Binding enlaceEspecieRegistrada(TopicExchange exchangeEventos) {
+        return BindingBuilder.bind(colaEspecies()).to(exchangeEventos).with("especie.registrada");
     }
 
     @Bean
