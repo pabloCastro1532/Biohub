@@ -13,6 +13,7 @@ import { HallazgosComponent } from './pages/hallazgos/hallazgos.component';
 import { PendienteComponent } from './pages/pendiente/pendiente.component';
 import { PlantillasComponent } from './pages/plantillas/plantillas.component';
 import { SinPermisoComponent } from './pages/sin-permiso/sin-permiso.component';
+import { UbicacionComponent } from './pages/ubicacion/ubicacion.component';
 
 /**
  * Pantalla real de cada ruta del menú. Cada integrante agrega UNA línea aquí al construir su historia;
@@ -24,7 +25,8 @@ const PANTALLAS: Record<string, Type<unknown>> = {
   '/accesos': AccesosComponent,
   '/equipos': EquiposComponent,
   '/hallazgos': HallazgosComponent,
-  '/plantillas': PlantillasComponent
+  '/plantillas': PlantillasComponent,
+  '/ubicacion': UbicacionComponent
 };
 
 /** Rutas protegidas por rol, tomadas del menú. */

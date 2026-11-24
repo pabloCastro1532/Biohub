@@ -132,7 +132,7 @@ import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service
                 </tr>
               </thead>
               <tbody>
-                @for (h of hallazgos(); track h.id) {
+                @for (h of visibles(); track h.id) {
                   <tr>
                     <td class="font-semibold">{{ h.id }}</td>
                     <td>{{ nombreDe(h.especieId) }}</td>
@@ -151,6 +151,27 @@ import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service
               </tbody>
             </table>
           </div>
+          @if (totalPaginas() > 1) {
+            <nav class="flex flex-wrap items-center justify-between gap-3 px-6 pb-6" aria-label="Páginas de hallazgos">
+              <p class="text-sm text-musgo" role="status">
+                Mostrando {{ desde() }} a {{ hasta() }} de {{ hallazgos().length }} hallazgos, los más recientes primero.
+              </p>
+              <div class="flex items-center gap-2">
+                <button type="button" class="btn-secundario" (click)="irAPagina(pagina() - 1)" [disabled]="pagina() === 0">
+                  Anterior
+                </button>
+                <span class="text-sm text-musgo">Página {{ pagina() + 1 }} de {{ totalPaginas() }}</span>
+                <button
+                  type="button"
+                  class="btn-secundario"
+                  (click)="irAPagina(pagina() + 1)"
+                  [disabled]="pagina() >= totalPaginas() - 1"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </nav>
+          }
         }
       </section>
 
@@ -290,6 +311,19 @@ export class HallazgosComponent {
   readonly vacio: Record<string, unknown> = {};
 
   hallazgos = signal<Hallazgo[]>([]);
+
+  // --- tabla paginada: con muchos hallazgos los paneles de editar y de historial quedaban al final de la página ---
+  readonly porPagina = 10;
+  pagina = signal(0);
+  totalPaginas = computed(() => Math.max(1, Math.ceil(this.hallazgos().length / this.porPagina)));
+  /** Los más recientes primero, de a 10. */
+  visibles = computed(() => {
+    const ordenados = [...this.hallazgos()].sort((a, b) => b.id - a.id);
+    const inicio = Math.min(this.pagina(), this.totalPaginas() - 1) * this.porPagina;
+    return ordenados.slice(inicio, inicio + this.porPagina);
+  });
+  desde = computed(() => (this.hallazgos().length === 0 ? 0 : Math.min(this.pagina(), this.totalPaginas() - 1) * this.porPagina + 1));
+  hasta = computed(() => Math.min(this.desde() + this.porPagina - 1, this.hallazgos().length));
   especies = signal<Especie[]>([]);
   cargando = signal(true);
   errorCarga = signal<string | null>(null);
@@ -396,6 +430,15 @@ export class HallazgosComponent {
       });
   }
 
+  irAPagina(n: number): void {
+    this.pagina.set(Math.max(0, Math.min(n, this.totalPaginas() - 1)));
+  }
+
+  /** Lleva la vista al panel que se acaba de abrir: está debajo de la tabla y si no, parece que el botón no hizo nada. */
+  private llevarA(idTitulo: string): void {
+    setTimeout(() => document.getElementById(idTitulo)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  }
+
   // ----- editar -----
   abrirEdicion(h: Hallazgo): void {
     this.aviso.set(null);
@@ -408,6 +451,7 @@ export class HallazgosComponent {
       longitud: null,
       motivo: ''
     });
+    this.llevarA('titulo-edicion');
     this.valoresInicialesEdicion.set({ ...h.atributos });
     this.valoresEdicion.set({ ...h.atributos });
     this.atributosEdicion.set([]);
@@ -458,6 +502,7 @@ export class HallazgosComponent {
   // ----- historial -----
   verHistorial(h: Hallazgo): void {
     this.historialDe.set(h);
+    this.llevarA('titulo-historial');
     this.versiones.set([]);
     this.errorHistorial.set(null);
     this.cargandoHistorial.set(true);

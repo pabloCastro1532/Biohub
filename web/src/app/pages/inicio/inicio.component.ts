@@ -38,8 +38,8 @@ const QUE_PUEDES_HACER: Record<string, Acciones> = {
   },
   '/ubicacion': {
     DIRECTOR: ['Consultar la ubicación exacta de un hallazgo; cada consulta queda registrada'],
-    AUDITOR: ['Consultar la ubicación exacta de un hallazgo; cada consulta queda registrada'],
-    SEGURIDAD: ['Consultar la ubicación exacta de un hallazgo; cada consulta queda registrada']
+    AUDITOR: ['Consultar la región de un hallazgo; la ubicación exacta es solo del director y cada consulta queda registrada'],
+    SEGURIDAD: ['Consultar la región de un hallazgo; la ubicación exacta es solo del director y cada consulta queda registrada']
   },
   '/accesos': {
     SEGURIDAD: [
@@ -56,8 +56,7 @@ const QUE_PUEDES_HACER: Record<string, Acciones> = {
       'Recibir alertas cuando alguien intenta consultar ubicaciones sin permiso',
       'Revocar el acceso de un usuario',
       'Ver qué ubicaciones quedaron expuestas'
-    ],
-    ADMINISTRADOR: ['Revocar el acceso de un usuario', 'Ver qué ubicaciones quedaron expuestas']
+    ]
   },
   '/equipos': {
     ADMINISTRADOR: [
