@@ -3,6 +3,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../../core/auth.service';
 import { mensajeDeError } from '../../core/errores';
+import { AtributosFormComponent } from '../hallazgos/atributos-form.component';
+import { traducirErrores } from '../hallazgos/etiquetas-atributos';
 import { AtributoVista, Especie, Plantilla, PlantillasService, Validacion } from './plantillas.service';
 
 /**
@@ -13,7 +15,7 @@ import { AtributoVista, Especie, Plantilla, PlantillasService, Validacion } from
 @Component({
   selector: 'app-plantillas',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, AtributosFormComponent],
   template: `
     <header class="mb-8">
       <h1 class="text-2xl font-semibold tracking-tight">Plantillas por especie</h1>
@@ -82,40 +84,10 @@ import { AtributoVista, Especie, Plantilla, PlantillasService, Validacion } from
           <h2 class="text-lg font-semibold">Probar un registro</h2>
           <p class="mt-1 text-sm text-musgo">El formulario sale de la plantilla. Validar no guarda nada.</p>
 
-          <div class="mt-5 grid gap-4 md:grid-cols-2">
-            @for (a of p.atributos; track a.nombre) {
-              <div>
-                <label [for]="'attr-' + a.nombre" class="etiqueta">
-                  {{ a.nombre }}{{ a.requerido ? ' *' : '' }}
-                </label>
-                @switch (a.tipo) {
-                  @case ('ENUMERADO') {
-                    <select [id]="'attr-' + a.nombre" (change)="poner(a, $event)" class="campo">
-                      <option value="">Sin elegir</option>
-                      @for (v of a.valores; track v) {
-                        <option [value]="v">{{ v }}</option>
-                      }
-                    </select>
-                  }
-                  @case ('BOOLEANO') {
-                    <input
-                      [id]="'attr-' + a.nombre"
-                      type="checkbox"
-                      (change)="poner(a, $event)"
-                      class="h-5 w-5 rounded border-slate-300 accent-bio-600"
-                    />
-                  }
-                  @case ('NUMERO') {
-                    <input [id]="'attr-' + a.nombre" type="number" (input)="poner(a, $event)" class="campo" />
-                  }
-                  @case ('FECHA') {
-                    <input [id]="'attr-' + a.nombre" type="date" (input)="poner(a, $event)" class="campo" />
-                  }
-                  @default {
-                    <input [id]="'attr-' + a.nombre" type="text" (input)="poner(a, $event)" class="campo" />
-                  }
-                }
-              </div>
+          <div class="mt-5">
+            <!-- Se vuelve a crear al cambiar de plantilla o de versión, para que no queden valores de la anterior. -->
+            @for (clave of [p.id + '-' + p.version]; track clave) {
+              <app-atributos-form [atributos]="p.atributos" prefijo="attr" (valoresChange)="alCambiar($event)" />
             }
           </div>
 
@@ -130,7 +102,7 @@ import { AtributoVista, Especie, Plantilla, PlantillasService, Validacion } from
             } @else {
               <ul class="aviso-error mt-4 space-y-1" role="alert">
                 @for (m of r.errores; track m) {
-                  <li>{{ m }}</li>
+                  <li>{{ texto(m) }}</li>
                 }
               </ul>
             }
@@ -210,20 +182,15 @@ export class PlantillasComponent {
     });
   }
 
-  /** Lee el campo según su tipo y lo guarda; un campo vacío se quita para que "obligatorio" falle como corresponde. */
-  poner(a: AtributoVista, ev: Event): void {
-    const campo = ev.target as HTMLInputElement;
-    const siguiente = { ...this.valores() };
-
-    if (a.tipo === 'BOOLEANO') {
-      siguiente[a.nombre] = campo.checked;
-    } else if (campo.value === '') {
-      delete siguiente[a.nombre];
-    } else {
-      siguiente[a.nombre] = a.tipo === 'NUMERO' ? Number(campo.value) : campo.value;
-    }
-    this.valores.set(siguiente);
+  /** El formulario de prueba avisa cada vez que el usuario cambia un campo. */
+  alCambiar(valores: Record<string, unknown>): void {
+    this.valores.set(valores);
     this.resultado.set(null);
+  }
+
+  /** Un mensaje del validador en lenguaje claro. */
+  texto(mensaje: string): string {
+    return traducirErrores(mensaje);
   }
 
   validar(p: Plantilla): void {
