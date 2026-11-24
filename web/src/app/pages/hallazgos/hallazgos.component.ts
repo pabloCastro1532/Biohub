@@ -14,6 +14,7 @@ import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service
 /**
  * HU-01: registrar un hallazgo con sus datos básicos y los atributos de su especie (plantilla activa, HU-02).
  * HU-08: editar un hallazgo con un motivo obligatorio (crea una versión nueva).
+ * HU-09: reclasificar un hallazgo (cambiarle la especie) con un motivo obligatorio; solo el director.
  * HU-10, HU-11 y HU-12: ver el historial de versiones con autor, motivo y qué cambió.
  * La ubicación exacta nunca se muestra aquí (ASR-4): la lista solo trae la región.
  */
@@ -145,6 +146,9 @@ import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service
                       @if (puedeEscribir()) {
                         <button type="button" class="btn-texto" (click)="abrirEdicion(h)">Editar</button>
                       }
+                      @if (puedeReclasificar()) {
+                        <button type="button" class="btn-texto" (click)="abrirReclasificacion(h)">Reclasificar</button>
+                      }
                     </td>
                   </tr>
                 }
@@ -251,6 +255,60 @@ import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service
         </section>
       }
 
+      @if (reclasificando(); as h) {
+        <section class="tarjeta" aria-labelledby="titulo-reclasificacion">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h2 id="titulo-reclasificacion" class="text-lg font-semibold">Reclasificar hallazgo {{ h.id }}</h2>
+              <p class="mt-1 text-sm text-musgo">
+                Ahora figura como <span class="font-medium text-slate-900">{{ nombreDe(h.especieId) }}</span>. Guardar crea la
+                versión {{ h.version + 1 }} con la especie nueva; la anterior no se borra. La región, la fecha y la ubicación se conservan.
+              </p>
+            </div>
+            <button type="button" class="btn-texto" (click)="cerrarReclasificacion()">Cancelar</button>
+          </div>
+
+          <form [formGroup]="formReclasificacion" (ngSubmit)="guardarReclasificacion()" class="mt-4 space-y-4">
+            <div class="md:w-1/2">
+              <label for="rec-especie" class="etiqueta">Especie nueva</label>
+              <select id="rec-especie" formControlName="especieId" (change)="elegirEspecieNueva()" class="campo">
+                <option [ngValue]="null">Elige la especie correcta</option>
+                @for (e of especiesParaReclasificar(); track e.id) {
+                  <option [ngValue]="e.id">{{ nombreDe(e.id) }}</option>
+                }
+              </select>
+            </div>
+
+            @if (atributosReclasificacion().length > 0) {
+              <div>
+                <h3 class="mb-2 text-sm font-medium text-musgo">Atributos de la especie nueva</h3>
+                <app-atributos-form
+                  [atributos]="atributosReclasificacion()"
+                  [valores]="valoresInicialesReclasificacion()"
+                  prefijo="rec"
+                  (valoresChange)="valoresReclasificacion.set($event); errorReclasificacion.set(null)"
+                />
+              </div>
+            }
+
+            <div>
+              <label for="rec-motivo" class="etiqueta">Motivo de la reclasificación</label>
+              <textarea id="rec-motivo" formControlName="motivo" rows="3" maxlength="500" class="campo"></textarea>
+              <p class="mt-1 text-xs text-musgo">Obligatorio. Queda guardado en el historial junto con tu nombre.</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-4">
+              <button type="submit" [disabled]="formReclasificacion.invalid || guardandoReclasificacion()" class="btn-primario">
+                {{ guardandoReclasificacion() ? 'Guardando...' : 'Reclasificar hallazgo' }}
+              </button>
+              @if (errorReclasificacion()) {
+                <p class="text-sm text-red-700" role="alert">{{ errorReclasificacion() }}</p>
+              }
+            </div>
+          </form>
+        </section>
+      }
+
       @if (historialDe(); as h) {
         <section class="tarjeta" aria-labelledby="titulo-historial">
           <div class="flex items-start justify-between gap-4">
@@ -287,7 +345,7 @@ import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service
                     </p>
                   }
                   <p class="mt-2 text-sm text-musgo">
-                    {{ v.region }} · observado el {{ v.fechaObservacion | date: 'dd/MM/yyyy' }}
+                    {{ nombreDe(v.especieId) }} · {{ v.region }} · observado el {{ v.fechaObservacion | date: 'dd/MM/yyyy' }}
                     @if (resumen(v.atributos); as r) { · {{ r }} }
                   </p>
                 </li>
@@ -338,6 +396,8 @@ export class HallazgosComponent {
 
   /** Registrar: investigador y director (igual que el backend). El auditor solo consulta. */
   puedeEscribir = computed(() => this.auth.tieneRol('INVESTIGADOR', 'DIRECTOR'));
+  /** Reclasificar: solo el director científico (igual que el backend). */
+  puedeReclasificar = computed(() => this.auth.tieneRol('DIRECTOR'));
 
   // --- registrar ---
   formRegistro = this.fb.group({
@@ -365,6 +425,23 @@ export class HallazgosComponent {
     latitud: this.fb.control<number | null>(null, [Validators.required, Validators.min(-90), Validators.max(90)]),
     longitud: this.fb.control<number | null>(null, [Validators.required, Validators.min(-180), Validators.max(180)]),
     motivo: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(500)])
+  });
+
+  // --- reclasificar (HU-09) ---
+  reclasificando = signal<Hallazgo | null>(null);
+  atributosReclasificacion = signal<AtributoVista[]>([]);
+  valoresInicialesReclasificacion = signal<Record<string, unknown>>({});
+  valoresReclasificacion = signal<Record<string, unknown>>({});
+  guardandoReclasificacion = signal(false);
+  errorReclasificacion = signal<string | null>(null);
+  formReclasificacion = this.fb.group({
+    especieId: this.fb.control<number | null>(null, Validators.required),
+    motivo: this.fb.nonNullable.control('', [Validators.required, Validators.maxLength(500)])
+  });
+  /** Todas las especies menos la actual del hallazgo. */
+  especiesParaReclasificar = computed(() => {
+    const h = this.reclasificando();
+    return this.especies().filter((e) => h === null || e.id !== h.especieId);
   });
 
   // --- historial (HU-10, HU-11 y HU-12) ---
@@ -495,6 +572,72 @@ export class HallazgosComponent {
         error: (err: HttpErrorResponse) => {
           this.guardandoEdicion.set(false);
           this.errorEdicion.set(traducirErrores(mensajeDeError(err)));
+        }
+      });
+  }
+
+  // ----- reclasificar (HU-09) -----
+  abrirReclasificacion(h: Hallazgo): void {
+    this.aviso.set(null);
+    this.errorReclasificacion.set(null);
+    this.reclasificando.set(h);
+    this.formReclasificacion.reset({ especieId: null, motivo: '' });
+    this.atributosReclasificacion.set([]);
+    this.valoresInicialesReclasificacion.set({});
+    this.valoresReclasificacion.set({});
+    this.llevarA('titulo-reclasificacion');
+  }
+
+  cerrarReclasificacion(): void {
+    this.reclasificando.set(null);
+    this.errorReclasificacion.set(null);
+  }
+
+  /** Al elegir la especie nueva se muestran SUS atributos; los que se llaman igual que los actuales llegan ya llenos. */
+  elegirEspecieNueva(): void {
+    const h = this.reclasificando();
+    const id = this.formReclasificacion.controls.especieId.value;
+    this.atributosReclasificacion.set([]);
+    this.valoresInicialesReclasificacion.set({});
+    this.valoresReclasificacion.set({});
+    this.errorReclasificacion.set(null);
+    if (h === null || id === null) {
+      return;
+    }
+    this.plantillas.activaDe(id).subscribe({
+      next: (p) => {
+        const nombres = new Set(p.atributos.map((a) => a.nombre));
+        const heredados = Object.fromEntries(Object.entries(h.atributos).filter(([k]) => nombres.has(k)));
+        this.valoresInicialesReclasificacion.set(heredados);
+        this.valoresReclasificacion.set({ ...heredados });
+        this.atributosReclasificacion.set(p.atributos);
+      },
+      error: (err: HttpErrorResponse) => this.errorReclasificacion.set(traducirErrores(mensajeDeError(err)))
+    });
+  }
+
+  guardarReclasificacion(): void {
+    const h = this.reclasificando();
+    if (h === null || this.formReclasificacion.invalid) {
+      return;
+    }
+    const v = this.formReclasificacion.getRawValue();
+    this.guardandoReclasificacion.set(true);
+    this.errorReclasificacion.set(null);
+
+    this.api
+      .reclasificar(h.id, { especieId: v.especieId as number, atributos: this.valoresReclasificacion(), motivo: v.motivo })
+      .subscribe({
+        next: (nuevo) => {
+          this.guardandoReclasificacion.set(false);
+          this.aviso.set(`Hallazgo ${nuevo.id} reclasificado como ${this.nombreDe(nuevo.especieId)} (versión ${nuevo.version}).`);
+          this.cerrarReclasificacion();
+          this.cargar();
+          this.verHistorial(nuevo);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.guardandoReclasificacion.set(false);
+          this.errorReclasificacion.set(traducirErrores(mensajeDeError(err)));
         }
       });
   }
