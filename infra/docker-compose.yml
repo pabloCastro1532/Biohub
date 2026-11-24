@@ -135,6 +135,24 @@ services:
     ports:
       - "8083:8082"
 
+  # API Gateway minimo (ASR-5): unico punto de entrada, reparte la consulta publica entre sus dos instancias.
+  gateway:
+    profiles: ["completo"]
+    build: ../gateway
+    container_name: biohub-gateway
+    depends_on:
+      - servicio-cientifico
+      - consulta-publica-1
+      - consulta-publica-2
+    environment:
+      CIENTIFICO_URL: http://servicio-cientifico:8081
+      PUBLICA_1_URL: http://consulta-publica-1:8082
+      PUBLICA_2_URL: http://consulta-publica-2:8082
+      TZ: America/Bogota
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=America/Bogota"
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+
 volumes:
   mysql_data:
   rabbit_data:
