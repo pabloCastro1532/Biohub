@@ -66,6 +66,11 @@ export class PlantillasService {
     return this.http.get<Especie[]>('/api/plantillas/especies');
   }
 
+  /** Agrega una especie al catálogo (administrador y director). Nace con una plantilla inicial. */
+  crearEspecie(nombreCientifico: string, nombreComun: string): Observable<Especie> {
+    return this.http.post<Especie>('/api/especies', { nombreCientifico, nombreComun: nombreComun || null });
+  }
+
   activaDe(especieId: number): Observable<Plantilla> {
     return this.http.get<Plantilla>(`/api/plantillas/activa/${especieId}`).pipe(map(normalizar));
   }
