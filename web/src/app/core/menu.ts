@@ -23,5 +23,6 @@ export const MENU: OpcionMenu[] = [
   { ruta: '/ubicacion', etiqueta: 'Ubicación', historia: 'HU-15, 16, 17 y 25', roles: ['DIRECTOR', 'AUDITOR', 'SEGURIDAD'] },
   { ruta: '/accesos', etiqueta: 'Registro de accesos', historia: 'HU-25', roles: ['SEGURIDAD', 'AUDITOR'] },
   { ruta: '/seguridad', etiqueta: 'Seguridad y revocación', historia: 'HU-26 y HU-27', roles: ['SEGURIDAD'] },
+  { ruta: '/usuarios', etiqueta: 'Usuarios', historia: 'Gestión de cuentas', roles: ['ADMINISTRADOR'] },
   { ruta: '/equipos', etiqueta: 'Equipos de campo', historia: 'HU-03 a 07 y HU-24', roles: ['INVESTIGADOR', 'DIRECTOR', 'ADMINISTRADOR'] }
 ];
