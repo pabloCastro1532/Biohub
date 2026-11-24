@@ -8,7 +8,7 @@ import { AuthService } from '../../core/auth.service';
 import { mensajeDeError } from '../../core/errores';
 import { AtributoVista, Especie, PlantillasService } from '../plantillas/plantillas.service';
 import { AtributosFormComponent } from './atributos-form.component';
-import { REGIONES, etiquetaAtributo, valorLegible } from './etiquetas-atributos';
+import { REGIONES, etiquetaAtributo, traducirErrores, valorLegible } from './etiquetas-atributos';
 import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service';
 
 /**
@@ -87,7 +87,7 @@ import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service
                   [atributos]="atributosRegistro()"
                   [valores]="vacio"
                   prefijo="reg"
-                  (valoresChange)="valoresRegistro.set($event)"
+                  (valoresChange)="valoresRegistro.set($event); errorRegistro.set(null)"
                 />
               </div>
             }
@@ -207,7 +207,7 @@ import { Hallazgo, HallazgosService, VersionHallazgo } from './hallazgos.service
                   [atributos]="atributosEdicion()"
                   [valores]="valoresInicialesEdicion()"
                   prefijo="ed"
-                  (valoresChange)="valoresEdicion.set($event)"
+                  (valoresChange)="valoresEdicion.set($event); errorEdicion.set(null)"
                 />
               </div>
             }
@@ -358,7 +358,7 @@ export class HallazgosComponent {
     }
     this.plantillas.activaDe(id).subscribe({
       next: (p) => this.atributosRegistro.set(p.atributos),
-      error: (err: HttpErrorResponse) => this.errorRegistro.set(mensajeDeError(err))
+      error: (err: HttpErrorResponse) => this.errorRegistro.set(traducirErrores(mensajeDeError(err)))
     });
   }
 
@@ -391,7 +391,7 @@ export class HallazgosComponent {
         },
         error: (err: HttpErrorResponse) => {
           this.guardando.set(false);
-          this.errorRegistro.set(mensajeDeError(err));
+          this.errorRegistro.set(traducirErrores(mensajeDeError(err)));
         }
       });
   }
@@ -413,7 +413,7 @@ export class HallazgosComponent {
     this.atributosEdicion.set([]);
     this.plantillas.activaDe(h.especieId).subscribe({
       next: (p) => this.atributosEdicion.set(p.atributos),
-      error: (err: HttpErrorResponse) => this.errorEdicion.set(mensajeDeError(err))
+      error: (err: HttpErrorResponse) => this.errorEdicion.set(traducirErrores(mensajeDeError(err)))
     });
   }
 
@@ -450,7 +450,7 @@ export class HallazgosComponent {
         },
         error: (err: HttpErrorResponse) => {
           this.guardandoEdicion.set(false);
-          this.errorEdicion.set(mensajeDeError(err));
+          this.errorEdicion.set(traducirErrores(mensajeDeError(err)));
         }
       });
   }
@@ -481,7 +481,11 @@ export class HallazgosComponent {
   /** Los atributos de una versión en una línea ("Sexo: macho, Peso (kg): 80"); vacío si no hay. */
   resumen(atributos: Record<string, unknown>): string {
     return Object.entries(atributos ?? {})
-      .map(([k, v]) => `${etiquetaAtributo(k)}: ${valorLegible(v)}`)
+      .map(([k, v]) => {
+        const nombre = etiquetaAtributo(k);
+        // "¿Iba en bandada? No" en vez de "¿Iba en bandada?: No".
+        return nombre.endsWith('?') ? `${nombre} ${valorLegible(v)}` : `${nombre}: ${valorLegible(v)}`;
+      })
       .join(', ');
   }
 

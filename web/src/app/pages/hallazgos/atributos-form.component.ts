@@ -24,13 +24,22 @@ import { ayudaAtributo, etiquetaAtributo } from './etiquetas-atributos';
               </select>
             }
             @case ('BOOLEANO') {
-              <input
-                [id]="prefijo + '-' + a.nombre"
-                type="checkbox"
-                [checked]="valores[a.nombre] === true"
-                (change)="poner(a, $event)"
-                class="h-5 w-5 rounded border-slate-300 accent-bio-600"
-              />
+              @if (a.requerido) {
+                <!-- Obligatorio: hay que responder Sí o No; una casilla sin marcar no distingue "No" de "olvidé responder". -->
+                <select [id]="prefijo + '-' + a.nombre" (change)="poner(a, $event)" class="campo">
+                  <option value="">Sin elegir</option>
+                  <option value="true" [selected]="valores[a.nombre] === true">Sí</option>
+                  <option value="false" [selected]="valores[a.nombre] === false">No</option>
+                </select>
+              } @else {
+                <input
+                  [id]="prefijo + '-' + a.nombre"
+                  type="checkbox"
+                  [checked]="valores[a.nombre] === true"
+                  (change)="poner(a, $event)"
+                  class="h-5 w-5 rounded border-slate-300 accent-bio-600"
+                />
+              }
             }
             @case ('NUMERO') {
               <input
@@ -83,22 +92,8 @@ export class AtributosFormComponent implements OnChanges {
   ayuda = ayudaAtributo;
 
   ngOnChanges(cambios: SimpleChanges): void {
-    if (cambios['valores']) {
+    if (cambios['valores'] || cambios['atributos']) {
       this.actual = { ...this.valores };
-    }
-    if (cambios['atributos'] || cambios['valores']) {
-      // Una casilla sin marcar es un "No" válido: si el atributo es obligatorio, se envía false desde el principio.
-      let cambio = false;
-      for (const a of this.atributos) {
-        if (a.tipo === 'BOOLEANO' && a.requerido && this.actual[a.nombre] === undefined) {
-          this.actual = { ...this.actual, [a.nombre]: false };
-          cambio = true;
-        }
-      }
-      if (cambio) {
-        const valores = { ...this.actual };
-        queueMicrotask(() => this.valoresChange.emit(valores));
-      }
     }
   }
 
@@ -107,12 +102,13 @@ export class AtributosFormComponent implements OnChanges {
     const campo = ev.target as HTMLInputElement;
     const siguiente = { ...this.actual };
 
-    if (a.tipo === 'BOOLEANO') {
+    if (a.tipo === 'BOOLEANO' && campo.type === 'checkbox') {
       siguiente[a.nombre] = campo.checked;
     } else if (campo.value === '') {
       delete siguiente[a.nombre];
     } else {
-      siguiente[a.nombre] = a.tipo === 'NUMERO' ? Number(campo.value) : campo.value;
+      siguiente[a.nombre] =
+        a.tipo === 'NUMERO' ? Number(campo.value) : a.tipo === 'BOOLEANO' ? campo.value === 'true' : campo.value;
     }
     this.actual = siguiente;
     this.valoresChange.emit({ ...siguiente });
