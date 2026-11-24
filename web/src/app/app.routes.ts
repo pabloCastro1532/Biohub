@@ -12,6 +12,7 @@ import { EquiposComponent } from './pages/equipos/equipos.component';
 import { HallazgosComponent } from './pages/hallazgos/hallazgos.component';
 import { PendienteComponent } from './pages/pendiente/pendiente.component';
 import { PlantillasComponent } from './pages/plantillas/plantillas.component';
+import { PortadaComponent } from './pages/portada/portada.component';
 import { SinPermisoComponent } from './pages/sin-permiso/sin-permiso.component';
 import { UbicacionComponent } from './pages/ubicacion/ubicacion.component';
 
@@ -38,13 +39,14 @@ const rutasDeMenu: Routes = MENU.filter((o) => o.ruta !== '/inicio').map((o) => 
 }));
 
 export const routes: Routes = [
+  // Portada pública: cualquiera busca especies sin iniciar sesión. El resto de la aplicación exige login.
+  { path: '', pathMatch: 'full', component: PortadaComponent },
   { path: 'login', component: LoginComponent },
   {
     path: '',
     component: ShellComponent,
     canActivate: [authGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'inicio' },
       { path: 'inicio', component: InicioComponent },
       ...rutasDeMenu,
       { path: 'sin-permiso', component: SinPermisoComponent }
