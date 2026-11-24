@@ -31,23 +31,27 @@ Proyecto de Ingeniería de Software 2 (ISW-2), Universidad El Bosque. Entrega 3.
 
 ```mermaid
 flowchart TD
-    NAV["Navegador Angular"]
-    GW["Gateway 8080"]
-    PUB["consulta-publica x2 puertos 8082 y 8083"]
-    CIE["servicio-cientifico puerto 8081 nucleo en capas"]
-    REDIS["Redis"]
-    MYSQL_L["MySQL lectura"]
-    MYSQL_C["MySQL cientifico y seguridad"]
-    RMQ["RabbitMQ exchange topic biohub.eventos"]
+    W["Navegador<br/>Angular 17"] --> G["Gateway :8080<br/>Spring Cloud Gateway"]
+    G -->|"/api/**"| N["Servicio científico :8081<br/>núcleo en capas"]
+    G -->|"/api/publico/**<br/>reparte y reintenta"| P1["Consulta pública :8082"]
+    G -->|"/api/publico/**"| P2["Consulta pública :8083"]
+    N --> DB1[("MySQL<br/>esquema científico<br/>coordenadas exactas")]
+    N -->|"publica eventos<br/>sin coordenadas"| MQ{{"RabbitMQ<br/>biohub.eventos"}}
+    MQ -->|"hallazgo.registrado<br/>hallazgo.reclasificado<br/>especie.registrada"| P1
+    MQ --> P2
+    MQ -->|"acceso a coordenadas"| M["Monitor de seguridad<br/>(dentro del núcleo)"]
+    M -->|"alerta"| ML["Mailpit<br/>correo de alerta"]
+    P1 --> R[("Redis<br/>caché")]
+    P2 --> R
+    P1 --> DB2[("MySQL<br/>esquema de lectura")]
+    P2 --> DB2
 
-    NAV --> GW
-    GW -->|"/api/publico/**"| PUB
-    GW -->|"/api/**"| CIE
-    PUB --> REDIS
-    PUB --> MYSQL_L
-    CIE --> MYSQL_C
-    CIE -->|publica eventos| RMQ
-    RMQ -->|consume eventos| PUB
+    classDef nucleo fill:#dcf1e4,stroke:#237d4e,color:#123d27
+    classDef publico fill:#f0f9f4,stroke:#2f9e63,color:#123d27
+    classDef datos fill:#fbf5e6,stroke:#8a5a0c,color:#1c2b22
+    class N,M nucleo
+    class P1,P2,G,W publico
+    class DB1,DB2,R,MQ,ML datos
 ```
 
 - **servicio-cientifico**: el núcleo. Hallazgos, especies, plantillas, equipos, préstamos, cuentas, seguridad. Escribe en su propio esquema y publica eventos.
@@ -188,7 +192,8 @@ El usuario es el nombre del rol en minúsculas y la contraseña es `biohub` para
 - Ubicación exacta solo para el director, con registro de cada acceso.
 - Alertas de seguridad: más de 50 consultas de ubicación en 60 minutos, o 5 intentos rechazados en 10 minutos, generan una alerta y un correo (visible en Mailpit).
 - Revocación de acceso: la cuenta queda inactiva y el token deja de valer de inmediato (401).
-- Gestión de equipos, préstamos y cuentas.
+- Gestión de equipos, préstamos y cuentas: el administrador crea cuentas con su rol y devuelve el acceso a una cuenta revocada.
+- Imágenes de un hallazgo: investigador y director suben fotos JPG o PNG (hasta 2 MB, 5 por hallazgo) y el auditor las ve. Se guardan sin metadatos, para que no lleven el GPS de la foto. No salen en la consulta pública.
 - Portada pública y consulta con caché.
 
 **Fuera de alcance** (acordado): HU-13, HU-14, HU-20 y HU-21.
@@ -224,13 +229,8 @@ La prueba de carga crea hallazgos reales; al terminar conviene hacer `docker com
 
 Pablo Castro, Yonnatan, Valentina Osorio y Santiago Rojas.
 
-## Apoyo durante el desarrollo
+## Uso de inteligencia artificial
 
-Durante el desarrollo del proyecto se usó Claude (Anthropic) como apoyo técnico para:
+Usamos Claude (Anthropic) como asistente de desarrollo. Redactó borradores de código, pruebas, scripts, documentación y material de estudio a partir de requisitos y decisiones que el equipo definió: los ASR, el alcance, la arquitectura y las historias de usuario.
 
-- **Resolución de problemas de puertos:** identificación y liberación de un puerto bloqueado que impedía levantar los servicios.
-- **Corrección de errores:** revisión de excepciones, configuración y lógica para encontrar la causa de los fallos.
-- **Diseño de pantallas:** apoyo en la estructura y distribución de las vistas de la interfaz en Angular.
-- **Docker:** ayuda cuando los contenedores no cargaban o la imagen no compilaba correctamente, incluyendo ajustes en los Dockerfile y en la configuración de servicios.
-
-Las decisiones de arquitectura, la implementación final y las pruebas fueron responsabilidad del equipo.
+El equipo revisó, ejecutó y probó cada cambio en sus equipos, hizo los commits y los pull requests, resolvió errores y verificó los resultados con pruebas unitarias, pruebas de arquitectura (ArchUnit) y la prueba de carga con k6.
