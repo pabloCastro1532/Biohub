@@ -1,5 +1,7 @@
 import { Type } from '@angular/core';
 import { Routes } from '@angular/router';
+import { EspeciesComponent } from './pages/especies/especies.component';
+import { SeguridadComponent } from './pages/seguridad/seguridad.component';
 import { authGuard, rolGuard } from './core/auth.guard';
 import { MENU } from './core/menu';
 import { ShellComponent } from './layout/shell.component';
@@ -17,6 +19,8 @@ import { SinPermisoComponent } from './pages/sin-permiso/sin-permiso.component';
  * las rutas que no están en esta lista muestran el marcador de posición.
  */
 const PANTALLAS: Record<string, Type<unknown>> = {
+  '/especies': EspeciesComponent,
+  '/seguridad': SeguridadComponent,
   '/accesos': AccesosComponent,
   '/equipos': EquiposComponent,
   '/hallazgos': HallazgosComponent,
