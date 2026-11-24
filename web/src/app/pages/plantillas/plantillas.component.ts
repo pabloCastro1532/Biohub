@@ -1,10 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth.service';
 import { mensajeDeError } from '../../core/errores';
 import { AtributosFormComponent } from '../hallazgos/atributos-form.component';
-import { traducirErrores } from '../hallazgos/etiquetas-atributos';
+import { etiquetaAtributo, traducirErrores } from '../hallazgos/etiquetas-atributos';
+import { EditorEsquemaComponent, NOMBRE_TIPO } from './editor-esquema.component';
 import { AtributoVista, Especie, Plantilla, PlantillasService, Validacion } from './plantillas.service';
 
 /**
@@ -15,11 +15,11 @@ import { AtributoVista, Especie, Plantilla, PlantillasService, Validacion } from
 @Component({
   selector: 'app-plantillas',
   standalone: true,
-  imports: [ReactiveFormsModule, AtributosFormComponent],
+  imports: [AtributosFormComponent, EditorEsquemaComponent],
   template: `
     <header class="mb-8">
       <h1 class="text-2xl font-semibold tracking-tight">Plantillas por especie</h1>
-      <p class="mt-1 text-musgo">Cada especie define qué datos se registran de sus hallazgos.</p>
+      <p class="mt-1 text-musgo">Cada especie define qué datos se piden al registrar uno de sus hallazgos.</p>
     </header>
 
     <div class="space-y-6">
@@ -43,27 +43,27 @@ import { AtributoVista, Especie, Plantilla, PlantillasService, Validacion } from
 
         <section class="tarjeta !p-0 overflow-hidden">
           <div class="flex items-center justify-between px-6 pb-2 pt-6">
-            <h2 class="text-lg font-semibold">Atributos</h2>
+            <h2 class="text-lg font-semibold">Datos que se piden</h2>
             <span class="pildora bg-bio-100 text-bio-900">Versión {{ p.version }}, activa</span>
           </div>
           @if (p.atributos.length === 0) {
-            <p class="px-6 pb-6 text-musgo">Esta plantilla no define atributos.</p>
+            <p class="px-6 pb-6 text-musgo">Esta plantilla todavía no pide ningún dato.</p>
           } @else {
             <div class="overflow-x-auto px-3 pb-3">
               <table class="tabla">
                 <thead>
                   <tr>
-                    <th>Atributo</th>
+                    <th>Dato</th>
                     <th>Tipo</th>
-                    <th>Obligatorio</th>
-                    <th>Restricción</th>
+                    <th>¿Obligatorio?</th>
+                    <th>Opciones o límites</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (a of p.atributos; track a.nombre) {
                     <tr>
-                      <td class="font-semibold">{{ a.nombre }}</td>
-                      <td><span class="pildora bg-liquen text-musgo">{{ a.tipo }}</span></td>
+                      <td class="font-semibold">{{ nombreDe(a) }}</td>
+                      <td><span class="pildora bg-liquen text-musgo">{{ tipoLegible(a) }}</span></td>
                       <td>
                         @if (a.requerido) {
                           <span class="pildora bg-bio-100 text-bio-900">Sí</span>
@@ -81,8 +81,10 @@ import { AtributoVista, Especie, Plantilla, PlantillasService, Validacion } from
         </section>
 
         <section class="tarjeta">
-          <h2 class="text-lg font-semibold">Probar un registro</h2>
-          <p class="mt-1 text-sm text-musgo">El formulario sale de la plantilla. Validar no guarda nada.</p>
+          <h2 class="text-lg font-semibold">Probar el formulario</h2>
+          <p class="mt-1 text-sm text-musgo">
+            Así lo verá quien registre un hallazgo de esta especie. Llénalo y pulsa «Comprobar datos»; no se guarda nada.
+          </p>
 
           <div class="mt-5">
             <!-- Se vuelve a crear al cambiar de plantilla o de versión, para que no queden valores de la anterior. -->
@@ -92,13 +94,12 @@ import { AtributoVista, Especie, Plantilla, PlantillasService, Validacion } from
           </div>
 
           <div class="mt-5 flex flex-wrap items-center gap-4">
-            <button type="button" (click)="validar(p)" class="btn-primario">Validar atributos</button>
-            <code class="break-all text-xs text-musgo">{{ vistaPrevia() }}</code>
+            <button type="button" (click)="validar(p)" class="btn-primario">Comprobar datos</button>
           </div>
 
           @if (resultado(); as r) {
             @if (r.valido) {
-              <p class="aviso-ok mt-4" role="status">Los atributos cumplen la plantilla.</p>
+              <p class="aviso-ok mt-4" role="status">Los datos están completos y son válidos.</p>
             } @else {
               <ul class="aviso-error mt-4 space-y-1" role="alert">
                 @for (m of r.errores; track m) {
@@ -111,21 +112,22 @@ import { AtributoVista, Especie, Plantilla, PlantillasService, Validacion } from
 
         @if (puedeEditar()) {
           <section class="tarjeta">
-            <h2 class="text-lg font-semibold">Editar esquema</h2>
+            <h2 class="text-lg font-semibold">Cambiar los datos que se piden</h2>
             <p class="mt-1 text-sm text-musgo">
-              Guardar crea una versión nueva y la deja activa. La versión anterior se conserva.
+              Agrega, cambia o quita datos. Al guardar se crea una versión nueva, que queda activa; la anterior se
+              conserva. El formulario de arriba mostrará los cambios cuando guardes.
             </p>
-            <label for="esquema" class="sr-only">Esquema en JSON</label>
-            <textarea
-              id="esquema"
-              [formControl]="esquemaTexto"
-              rows="14"
-              spellcheck="false"
-              class="campo mt-4 font-mono text-xs leading-relaxed"
-            ></textarea>
-            <div class="mt-4 flex flex-wrap items-center gap-4">
+
+            <div class="mt-5">
+              <!-- Se vuelve a crear al cambiar de plantilla o de versión, para que arranque con lo guardado. -->
+              @for (clave of [p.id + '-' + p.version]; track clave) {
+                <app-editor-esquema [esquema]="p.esquema" />
+              }
+            </div>
+
+            <div class="mt-5 flex flex-wrap items-center gap-4">
               <button type="button" (click)="guardar(p)" [disabled]="guardando()" class="btn-primario">
-                {{ guardando() ? 'Guardando...' : 'Guardar como nueva versión' }}
+                {{ guardando() ? 'Guardando...' : 'Guardar cambios' }}
               </button>
               @if (errorEsquema()) {
                 <p class="text-sm text-red-700" role="alert">{{ errorEsquema() }}</p>
@@ -149,9 +151,8 @@ export class PlantillasComponent {
   /** Lo que el usuario va llenando en el formulario de prueba; solo trae los campos con valor. */
   valores = signal<Record<string, unknown>>({});
   resultado = signal<Validacion | null>(null);
-  vistaPrevia = computed(() => JSON.stringify(this.valores()));
 
-  esquemaTexto = new FormControl('', { nonNullable: true });
+  @ViewChild(EditorEsquemaComponent) editor?: EditorEsquemaComponent;
   errorEsquema = signal<string | null>(null);
   guardando = signal(false);
 
@@ -188,6 +189,14 @@ export class PlantillasComponent {
     this.resultado.set(null);
   }
 
+  nombreDe(a: AtributoVista): string {
+    return a.titulo || etiquetaAtributo(a.nombre);
+  }
+
+  tipoLegible(a: AtributoVista): string {
+    return NOMBRE_TIPO[a.tipo];
+  }
+
   /** Un mensaje del validador en lenguaje claro. */
   texto(mensaje: string): string {
     return traducirErrores(mensaje);
@@ -201,11 +210,9 @@ export class PlantillasComponent {
   }
 
   guardar(p: Plantilla): void {
-    let esquema: Record<string, unknown>;
-    try {
-      esquema = JSON.parse(this.esquemaTexto.value) as Record<string, unknown>;
-    } catch (e) {
-      this.errorEsquema.set('El JSON no es válido: ' + (e as Error).message);
+    const esquema = this.editor?.revisar();
+    if (!esquema) {
+      this.errorEsquema.set('Hay datos por corregir. Revisa los avisos en rojo.');
       return;
     }
     this.guardando.set(true);
@@ -215,7 +222,7 @@ export class PlantillasComponent {
       next: (nueva) => {
         this.guardando.set(false);
         this.mostrar(nueva);
-        this.aviso.set(`Versión ${nueva.version} guardada y activa.`);
+        this.aviso.set(`Listo: se guardó la versión ${nueva.version} y ya está activa.`);
       },
       error: (err: HttpErrorResponse) => {
         this.guardando.set(false);
@@ -227,6 +234,9 @@ export class PlantillasComponent {
   restriccion(a: AtributoVista): string {
     if (a.tipo === 'ENUMERADO') {
       return a.valores.join(', ');
+    }
+    if (a.tipo === 'BOOLEANO') {
+      return 'Sí o No';
     }
     if (a.minimo !== null && a.maximo !== null) {
       return `entre ${a.minimo} y ${a.maximo}`;
@@ -245,6 +255,5 @@ export class PlantillasComponent {
     this.valores.set({});
     this.resultado.set(null);
     this.errorEsquema.set(null);
-    this.esquemaTexto.setValue(JSON.stringify(p.esquema, null, 2));
   }
 }

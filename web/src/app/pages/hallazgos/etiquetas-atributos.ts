@@ -23,12 +23,29 @@ function generico(nombre: string): string {
   return unidad ? `${texto} (${unidad[1]})` : texto;
 }
 
+/**
+ * Nombres y ayudas que las personas escriben en el editor de plantillas (título y descripción de cada dato).
+ * Se llenan al leer una plantilla; tienen prioridad sobre la lista de arriba. Si dos especies usan el mismo nombre
+ * técnico con títulos distintos, vale el de la plantilla leída más recientemente.
+ */
+const PERSONALIZADOS: Record<string, Texto> = {};
+
+export function registrarTextos(atributos: { nombre: string; titulo?: string | null; descripcion?: string | null }[]): void {
+  for (const a of atributos) {
+    if (a.titulo) {
+      PERSONALIZADOS[a.nombre] = { etiqueta: a.titulo, ayuda: a.descripcion ?? undefined };
+    } else {
+      delete PERSONALIZADOS[a.nombre];
+    }
+  }
+}
+
 export function etiquetaAtributo(nombre: string): string {
-  return CONOCIDOS[nombre]?.etiqueta ?? generico(nombre);
+  return PERSONALIZADOS[nombre]?.etiqueta ?? CONOCIDOS[nombre]?.etiqueta ?? generico(nombre);
 }
 
 export function ayudaAtributo(nombre: string): string | null {
-  return CONOCIDOS[nombre]?.ayuda ?? null;
+  return PERSONALIZADOS[nombre]?.ayuda ?? CONOCIDOS[nombre]?.ayuda ?? null;
 }
 
 /** Un valor listo para leer: los booleanos como "Sí" o "No". */

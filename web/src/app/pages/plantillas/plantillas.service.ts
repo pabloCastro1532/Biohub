@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
+import { registrarTextos } from '../hallazgos/etiquetas-atributos';
 
 export interface Especie {
   id: number;
@@ -18,6 +19,9 @@ export interface AtributoVista {
   valores: string[];
   minimo: number | null;
   maximo: number | null;
+  /** Nombre para personas y ayuda que el editor guarda en el esquema; el servidor no los devuelve, se leen de allí. */
+  titulo?: string | null;
+  descripcion?: string | null;
 }
 
 export interface Plantilla {
@@ -39,7 +43,18 @@ export interface Validacion {
  * en mayúsculas. Se normaliza aquí, en un solo lugar, para que cada campo se arme con su tipo real.
  */
 function normalizar(p: Plantilla): Plantilla {
-  return { ...p, atributos: p.atributos.map((a) => ({ ...a, tipo: a.tipo.toUpperCase() as TipoAtributo })) };
+  const propiedades = (p.esquema?.['properties'] ?? {}) as Record<string, { title?: unknown; description?: unknown }>;
+  const atributos = p.atributos.map((a) => {
+    const prop = propiedades[a.nombre];
+    return {
+      ...a,
+      tipo: a.tipo.toUpperCase() as TipoAtributo,
+      titulo: typeof prop?.title === 'string' && prop.title.trim() ? prop.title : null,
+      descripcion: typeof prop?.description === 'string' && prop.description.trim() ? prop.description : null
+    };
+  });
+  registrarTextos(atributos);
+  return { ...p, atributos };
 }
 
 /** Contrato con /api/plantillas (HU-02). */
